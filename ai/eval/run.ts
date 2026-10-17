@@ -3,7 +3,7 @@ import path from "node:path";
 import { Assistant } from "../src/assistant.js";
 import { MockBackend } from "../src/backend/MockBackend.js";
 import { config, ROOT } from "../src/config.js";
-import { AnthropicModelClient } from "../src/llm.js";
+import { createModelClient, describeModelSetup } from "../src/models.js";
 import type { AskResponse, Locale } from "../src/types.js";
 
 interface Case {
@@ -15,7 +15,7 @@ interface Case {
 }
 
 const cases: Case[] = JSON.parse(fs.readFileSync(path.join(ROOT, "eval", "cases.json"), "utf8"));
-const model = config.anthropicApiKey ? new AnthropicModelClient(config.anthropicApiKey, config.model) : null;
+const model = createModelClient(config.ai);
 const backend = new MockBackend({ kbDir: config.kbDir, profilesFile: config.profilesFile });
 const assistant = new Assistant({ backend, model, now: () => new Date("2026-10-16T09:00:00Z") });
 
@@ -51,7 +51,7 @@ for (const c of cases) {
 }
 
 const pad = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + "…" : s.padEnd(n));
-console.log(`\nJanaMen HR-assistant eval · mode: ${model ? `llm (${config.model})` : "fallback (no API key)"} · ${cases.length} cases\n`);
+console.log(`\nJanaMen HR-assistant eval · ${describeModelSetup(config.ai, model)} · ${cases.length} cases\n`);
 console.log(`${pad("", 4)} ${pad("case", 22)} ${pad("expected", 10)} ${pad("got", 52)} note`);
 console.log("-".repeat(110));
 for (const r of rows) console.log(`${r.ok ? "PASS" : "FAIL"} ${pad(r.id, 22)} ${pad(r.kind, 10)} ${pad(r.got, 52)} ${r.note}`);

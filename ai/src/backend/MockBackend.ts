@@ -1,7 +1,9 @@
 import fs from "node:fs";
-import type { KbArticle, Profile } from "../types.js";
+import type { KbArticle, Profile, UserRole } from "../types.js";
 import { loadKbDir } from "../kb.js";
-import { UnauthorizedError, type BackendClient, type LogEntry } from "./BackendClient.js";
+import { BackendError, UnauthorizedError, type BackendClient, type LogEntry, type Me } from "./BackendClient.js";
+
+const ROLES: Record<string, UserRole> = { erlan: "manager", dinara: "hr" };
 
 export class MockBackend implements BackendClient {
   private profiles: Record<string, Profile>;
@@ -40,6 +42,10 @@ export class MockBackend implements BackendClient {
     return this.kb;
   }
 
+  async getMe(authHeader: string): Promise<Me> {
+    return { role: ROLES[this.login(authHeader)] ?? "employee" };
+  }
+
   async log(authHeader: string, entry: LogEntry): Promise<number | null> {
     const id = this.nextId++;
     this.logs.push({ ...entry, id, login: this.login(authHeader), escalated: false, created_at: new Date().toISOString() });
@@ -48,6 +54,10 @@ export class MockBackend implements BackendClient {
 
   async escalate(authHeader: string, logId: number): Promise<unknown> {
     const login = this.login(authHeader);
+    if (ROLES[login] === "hr") {
+      const message = "HR-специалист не может передавать вопросы в HR. Добавьте статью в базу знаний.";
+      throw new BackendError(422, "POST /assistant/escalate -> 422", { error: { code: "escalation_not_allowed", message } });
+    }
     const entry = this.logs.find((l) => l.id === logId && l.login === login);
     if (entry) entry.escalated = true;
     return { ok: true };

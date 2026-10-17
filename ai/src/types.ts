@@ -1,5 +1,6 @@
 export type Locale = "ru" | "kk";
 export type AskStatus = "answered" | "no_answer" | "refused";
+export type UserRole = "employee" | "manager" | "hr";
 
 export interface Profile {
   full_name: string;
