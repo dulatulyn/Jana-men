@@ -1,0 +1,52 @@
+{
+  "aigerim": {
+    "full_name": "Айгерим Садыкова",
+    "company": "ТОО «Jana Post»",
+    "position": "Специалист сортировочного центра",
+    "department": "Сортировочный центр, Алматы",
+    "manager": { "id": 3, "full_name": "Ерлан Жумабаев" },
+    "hire_date": "2022-03-14",
+    "vacation_balance_days": 18,
+    "work_type": "warehouse"
+  },
+  "daulet": {
+    "full_name": "Даулет Ахметов",
+    "company": "ТОО «Jana Post»",
+    "position": "Курьер",
+    "department": "Сортировочный центр, Алматы",
+    "manager": { "id": 3, "full_name": "Ерлан Жумабаев" },
+    "hire_date": "2023-06-01",
+    "vacation_balance_days": 24,
+    "work_type": "courier"
+  },
+  "erlan": {
+    "full_name": "Ерлан Жумабаев",
+    "company": "ТОО «Jana Post»",
+    "position": "Начальник смены сортировочного центра",
+    "department": "Сортировочный центр, Алматы",
+    "manager": { "id": 6, "full_name": "Марат Абенов" },
+    "hire_date": "2019-09-02",
+    "vacation_balance_days": 12,
+    "work_type": "warehouse"
+  },
+  "asel": {
+    "full_name": "Асель Нурланова",
+    "company": "ТОО «Jana Post»",
+    "position": "Бухгалтер",
+    "department": "Финансовый отдел",
+    "manager": { "id": 7, "full_name": "Гульнара Искакова" },
+    "hire_date": "2021-11-15",
+    "vacation_balance_days": 20,
+    "work_type": "office"
+  },
+  "dinara": {
+    "full_name": "Динара Касымова",
+    "company": "ТОО «Jana Post»",
+    "position": "HR-менеджер",
+    "department": "Отдел персонала",
+    "manager": { "id": 6, "full_name": "Марат Абенов" },
+    "hire_date": "2020-02-10",
+    "vacation_balance_days": 22,
+    "work_type": "office"
+  }
+}

@@ -1,0 +1,55 @@
+import type {
+  AssignCourseBody,
+  AssistantStats,
+  CalendarEntry,
+  Course,
+  CourseDetail,
+  CreateRequestBody,
+  Dashboard,
+  Enrollment,
+  HRRequest,
+  IntegrationLogEntry,
+  KbArticle,
+  LoginResponse,
+  Me,
+  Notification,
+  Profile,
+  QuizResult,
+  RequestDetail,
+  RequestListItem,
+  RequestListParams,
+  SyncResult,
+  TeamMember,
+  UnansweredQuestion,
+} from "./types";
+
+export interface ApiClient {
+  login(email: string, password: string): Promise<LoginResponse>;
+  me(): Promise<Me>;
+  profile(): Promise<Profile>;
+  dashboard(): Promise<Dashboard>;
+  listRequests(params?: RequestListParams): Promise<RequestListItem[]>;
+  createRequest(body: CreateRequestBody): Promise<HRRequest>;
+  getRequest(id: number): Promise<RequestDetail>;
+  approveRequest(id: number, comment?: string): Promise<HRRequest>;
+  rejectRequest(id: number, comment: string): Promise<HRRequest>;
+  cancelRequest(id: number): Promise<HRRequest>;
+  teamCalendar(from?: string, to?: string): Promise<CalendarEntry[]>;
+  team(): Promise<TeamMember[]>;
+  employee(id: number): Promise<TeamMember>;
+  courses(): Promise<Course[]>;
+  myEnrollments(): Promise<Enrollment[]>;
+  course(id: number): Promise<CourseDetail>;
+  completeLesson(enrollmentId: number, lessonId: number): Promise<Enrollment>;
+  submitQuiz(enrollmentId: number, answers: number[]): Promise<QuizResult>;
+  assignCourse(body: AssignCourseBody): Promise<Enrollment>;
+  notifications(): Promise<Notification[]>;
+  readNotification(id: number): Promise<void>;
+  readAllNotifications(): Promise<void>;
+  kb(): Promise<KbArticle[]>;
+  escalate(logId: number, question?: string): Promise<void>;
+  unanswered(): Promise<UnansweredQuestion[]>;
+  assistantStats(): Promise<AssistantStats>;
+  sync1c(): Promise<SyncResult>;
+  integrationsLog(): Promise<IntegrationLogEntry[]>;
+}
