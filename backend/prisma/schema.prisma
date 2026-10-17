@@ -1,0 +1,285 @@
+// JanaMen Digital HR — data model (SPEC §4).
+// Field names are snake_case on purpose: they match the /api/v1 JSON contract 1:1.
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "linux-musl-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  employee
+  manager
+  hr
+}
+
+enum Locale {
+  ru
+  kk
+}
+
+enum WorkType {
+  office
+  warehouse
+  courier
+}
+
+enum RequestType {
+  vacation
+  advance
+}
+
+enum RequestStatus {
+  submitted
+  manager_approved
+  approved
+  rejected
+  cancelled
+}
+
+enum EnrollmentStatus {
+  assigned
+  in_progress
+  completed
+}
+
+enum AskStatus {
+  answered
+  no_answer
+  refused
+}
+
+enum IntegrationSystem {
+  c1_zup       @map("1c_zup")
+  documentolog
+}
+
+enum IntegrationStatus {
+  ok
+  error
+}
+
+model User {
+  id            Int      @id @default(autoincrement())
+  email         String   @unique
+  password_hash String
+  employee_id   Int      @unique
+  role          Role
+  locale        Locale   @default(ru)
+  created_at    DateTime @default(now())
+
+  employee      Employee       @relation(fields: [employee_id], references: [id])
+  notifications Notification[]
+  assistantLogs AssistantLog[]
+
+  @@map("users")
+}
+
+/// Кадровые данные — источник истины 1С:ЗУП (только чтение, обновляются через sync).
+model Employee {
+  id                    Int      @id @default(autoincrement())
+  external_id_1c        String   @unique
+  full_name             String
+  company               String
+  position              String
+  department_id         Int
+  manager_id            Int?
+  hire_date             DateTime @db.Date
+  vacation_balance_days Int
+  phone                 String
+  work_type             WorkType
+
+  department   Department   @relation("DepartmentMembers", fields: [department_id], references: [id])
+  manager      Employee?    @relation("ManagerReports", fields: [manager_id], references: [id])
+  reports      Employee[]   @relation("ManagerReports")
+  headOf       Department[] @relation("DepartmentHead")
+  user         User?
+  requests     Request[]
+  events       RequestEvent[]
+  enrollments  Enrollment[] @relation("EnrollmentEmployee")
+  assignedByMe Enrollment[] @relation("EnrollmentAssigner")
+
+  @@index([manager_id])
+  @@map("employees")
+}
+
+model Department {
+  id      Int        @id @default(autoincrement())
+  name    String
+  head_id Int?
+
+  head    Employee?  @relation("DepartmentHead", fields: [head_id], references: [id])
+  members Employee[] @relation("DepartmentMembers")
+
+  @@map("departments")
+}
+
+model Request {
+  id             Int           @id @default(autoincrement())
+  employee_id    Int
+  type           RequestType
+  status         RequestStatus @default(submitted)
+  /// vacation: {start_date, end_date, days, comment} · advance: {amount, reason}
+  payload        Json
+  created_at     DateTime      @default(now())
+  updated_at     DateTime      @updatedAt
+  docflow_id     String?
+  external_1c_id String?
+
+  employee Employee       @relation(fields: [employee_id], references: [id])
+  events   RequestEvent[]
+
+  @@index([employee_id, status])
+  @@index([status])
+  @@map("requests")
+}
+
+model RequestEvent {
+  id          Int            @id @default(autoincrement())
+  request_id  Int
+  /// employee id of whoever made the transition
+  actor_id    Int?
+  from_status RequestStatus?
+  to_status   RequestStatus
+  comment     String?
+  created_at  DateTime       @default(now())
+
+  request Request   @relation(fields: [request_id], references: [id], onDelete: Cascade)
+  actor   Employee? @relation(fields: [actor_id], references: [id])
+
+  @@index([request_id])
+  @@map("request_events")
+}
+
+model Course {
+  id           Int    @id @default(autoincrement())
+  title        String
+  description  String
+  duration_min Int
+  cover        String
+
+  lessons     Lesson[]
+  questions   QuizQuestion[]
+  enrollments Enrollment[]
+
+  @@map("courses")
+}
+
+model Lesson {
+  id         Int    @id @default(autoincrement())
+  course_id  Int
+  order      Int
+  title      String
+  content_md String
+
+  course   Course           @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  progress LessonProgress[]
+
+  @@unique([course_id, order])
+  @@map("lessons")
+}
+
+model QuizQuestion {
+  id            Int    @id @default(autoincrement())
+  course_id     Int
+  text          String
+  options       Json
+  correct_index Int
+
+  course Course @relation(fields: [course_id], references: [id], onDelete: Cascade)
+
+  @@index([course_id])
+  @@map("quiz_questions")
+}
+
+model Enrollment {
+  id           Int              @id @default(autoincrement())
+  employee_id  Int
+  course_id    Int
+  /// employee id of the assigner; null = self-enrolled
+  assigned_by  Int?
+  due_date     DateTime?        @db.Date
+  status       EnrollmentStatus @default(assigned)
+  progress_pct Int              @default(0)
+  score        Int?
+  completed_at DateTime?
+
+  employee Employee         @relation("EnrollmentEmployee", fields: [employee_id], references: [id])
+  assigner Employee?        @relation("EnrollmentAssigner", fields: [assigned_by], references: [id])
+  course   Course           @relation(fields: [course_id], references: [id])
+  progress LessonProgress[]
+
+  @@unique([employee_id, course_id])
+  @@map("enrollments")
+}
+
+model LessonProgress {
+  enrollment_id Int
+  lesson_id     Int
+  completed_at  DateTime @default(now())
+
+  enrollment Enrollment @relation(fields: [enrollment_id], references: [id], onDelete: Cascade)
+  lesson     Lesson     @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+
+  @@id([enrollment_id, lesson_id])
+  @@map("lesson_progress")
+}
+
+model Notification {
+  id         Int       @id @default(autoincrement())
+  user_id    Int
+  type       String
+  title      String
+  body       String
+  link       String?
+  read_at    DateTime?
+  created_at DateTime  @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, read_at])
+  @@map("notifications")
+}
+
+model KbArticle {
+  id         Int      @id @default(autoincrement())
+  slug       String   @unique
+  title      String
+  category   String
+  body_md    String
+  updated_at DateTime @updatedAt
+
+  @@map("kb_articles")
+}
+
+model AssistantLog {
+  id         Int       @id @default(autoincrement())
+  user_id    Int
+  question   String
+  answer     String
+  sources    Json      @default("[]")
+  status     AskStatus
+  escalated  Boolean   @default(false)
+  created_at DateTime  @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@map("assistant_logs")
+}
+
+/// Журнал вызовов адаптеров интеграций (1С:ЗУП, Documentolog).
+model IntegrationLog {
+  id         Int               @id @default(autoincrement())
+  system     IntegrationSystem
+  operation  String
+  status     IntegrationStatus
+  details    String
+  created_at DateTime          @default(now())
+
+  @@map("integration_log")
+}
