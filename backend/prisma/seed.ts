@@ -51,7 +51,7 @@ export async function seedDatabase(prisma: PrismaClient, { force = false } = {})
     await tx.notification.createMany({
       data: d.notifications.map(({ read, ...n }) => ({ ...n, read_at: read ? n.created_at : null })),
     });
-    await tx.integrationLog.createMany({ data: d.integrationLog.map((l) => ({ ...l, status: "ok" as const })) });
+    await tx.integrationLog.createMany({ data: d.integrationLog });
 
     // KB: body_md is stored verbatim — the AI service checks quotes against it character by character.
     await tx.kbArticle.createMany({ data: kbData.map((a) => ({ slug: a.slug, title: a.title, category: a.category, body_md: a.body_md })) });

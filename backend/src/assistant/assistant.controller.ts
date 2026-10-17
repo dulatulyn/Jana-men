@@ -72,6 +72,12 @@ export class AssistantService {
   }
 
   async escalate(me: AuthUser, logId: number) {
+    if (me.role === "hr") {
+      throw invalid(
+        "HR-специалисту не нужно передавать вопрос в HR. Добавьте статью в базу знаний, чтобы ассистент начал отвечать.",
+        "escalation_not_allowed",
+      );
+    }
     const log = await this.prisma.assistantLog.findUnique({ where: { id: logId } });
     // Someone else's log looks the same as a missing one: ids can't be probed.
     if (!log || log.user_id !== me.id) throw notFound("Вопрос не найден");

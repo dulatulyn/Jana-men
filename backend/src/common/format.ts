@@ -17,6 +17,9 @@ export function dayOffset(offset = 0): string {
   return new Date(Date.UTC(n.getFullYear(), n.getMonth(), n.getDate() + offset)).toISOString().slice(0, 10);
 }
 
+export const addDays = (iso: string, days: number) =>
+  new Date(Date.parse(`${iso}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
+
 export const daysBetween = (a: string, b: string) =>
   Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000) + 1;
 

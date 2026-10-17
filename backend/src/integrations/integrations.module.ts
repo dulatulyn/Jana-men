@@ -1,6 +1,6 @@
 import { Global, Module } from "@nestjs/common";
 import { config } from "../config";
-import { DOCS_ADAPTER, HRIS_ADAPTER } from "./adapters";
+import { DOCS_ADAPTER, HRIS_ADAPTER, INTEGRATION_OPTIONS, type IntegrationOptions } from "./adapters";
 import { IntegrationsController } from "./integrations.controller";
 import { IntegrationsService } from "./integrations.service";
 import { Mock1CZupAdapter, MockDocumentologAdapter } from "./mock.adapters";
@@ -11,11 +11,17 @@ if (config.integrationsMode !== "mock") {
   throw new Error(`INTEGRATIONS_MODE=${config.integrationsMode} is not implemented; only "mock" is available`);
 }
 
+const options: IntegrationOptions = {
+  timeoutMs: config.integrationsTimeoutMs,
+  syncTimeoutMs: config.integrationsSyncTimeoutMs,
+};
+
 @Global()
 @Module({
   controllers: [IntegrationsController],
   providers: [
     IntegrationsService,
+    { provide: INTEGRATION_OPTIONS, useValue: options },
     { provide: HRIS_ADAPTER, useClass: Mock1CZupAdapter },
     { provide: DOCS_ADAPTER, useClass: MockDocumentologAdapter },
   ],

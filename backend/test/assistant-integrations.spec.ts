@@ -65,6 +65,19 @@ describe("assistant logs & escalation", () => {
     expect((await api.post("aigerim", "/assistant/escalate", {})).status).toBe(422);
   });
 
+  it("HR can't escalate to HR: 422, nothing flagged or sent", async () => {
+    const { log_id } = (await api.post("dinara", "/assistant/logs", { question: "Есть ли парковка?", status: "no_answer" })).body;
+    const r = await api.post("dinara", "/assistant/escalate", { log_id });
+    expect(r.status).toBe(422);
+    expect(r.body.error).toEqual({
+      code: "escalation_not_allowed",
+      message: "HR-специалисту не нужно передавать вопрос в HR. Добавьте статью в базу знаний, чтобы ассистент начал отвечать.",
+    });
+    expect((await api.prisma.assistantLog.findUniqueOrThrow({ where: { id: log_id } })).escalated).toBe(false);
+    const sent = (await api.get("dinara", "/notifications")).body.filter((n: { type: string }) => n.type === "assistant_escalated");
+    expect(sent).toHaveLength(0);
+  });
+
   it("HR sees unanswered questions grouped by frequency, and stats", async () => {
     await api.post("asel", "/assistant/logs", { question: "положена ли курьерам компенсация за бензин", status: "no_answer" });
     const un = (await api.get("dinara", "/assistant/unanswered")).body;
@@ -72,7 +85,7 @@ describe("assistant logs & escalation", () => {
     for (let i = 1; i < un.length; i++) expect(un[i - 1].count).toBeGreaterThanOrEqual(un[i].count);
 
     const stats = (await api.get("dinara", "/assistant/stats")).body;
-    expect(stats).toEqual({ total: 48, answered: 32, no_answer: 13, refused: 3, escalated: 1 });
+    expect(stats).toEqual({ total: 129, answered: 97, no_answer: 20, refused: 12, escalated: 7 });
     expect((await api.get("erlan", "/assistant/stats")).status).toBe(403);
     expect((await api.get("aigerim", "/assistant/unanswered")).status).toBe(403);
   });

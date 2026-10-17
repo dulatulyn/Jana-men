@@ -15,6 +15,9 @@ const pad = (n: number, width: number) => String(n).padStart(width, "0");
 @Injectable()
 export class Mock1CZupAdapter implements HrisAdapter {
   readonly name = "mock-1c-zup";
+  private readonly vacations = new Map<string, { external_id: string; vacation_balance_days: number }>();
+  private readonly advances = new Map<string, { external_id: string }>();
+
   constructor(private prisma: PrismaService) {}
 
   async fetchEmployees(): Promise<HrisEmployee[]> {
@@ -34,15 +37,23 @@ export class Mock1CZupAdapter implements HrisAdapter {
   }
 
   async postVacation(input: PostVacationInput) {
+    const seen = this.vacations.get(input.idempotency_key);
+    if (seen) return seen;
     const e = await this.prisma.employee.findUniqueOrThrow({ where: { external_id_1c: input.employee_external_id } });
-    return {
+    const posted = {
       external_id: `ЗУП-ОТ-${pad(input.request_id, 6)}`,
       vacation_balance_days: Math.max(0, e.vacation_balance_days - input.days),
     };
+    this.vacations.set(input.idempotency_key, posted);
+    return posted;
   }
 
   async postAdvance(input: PostAdvanceInput) {
-    return { external_id: `ЗУП-АВ-${pad(input.request_id, 6)}` };
+    const seen = this.advances.get(input.idempotency_key);
+    if (seen) return seen;
+    const posted = { external_id: `ЗУП-АВ-${pad(input.request_id, 6)}` };
+    this.advances.set(input.idempotency_key, posted);
+    return posted;
   }
 }
 
@@ -50,8 +61,13 @@ export class Mock1CZupAdapter implements HrisAdapter {
 @Injectable()
 export class MockDocumentologAdapter implements DocsAdapter {
   readonly name = "mock-documentolog";
+  private readonly documents = new Map<string, { docflow_id: string }>();
 
   async createDocument(input: CreateDocumentInput) {
-    return { docflow_id: `DL-${new Date().getFullYear()}-${pad(5000 + input.request_id, 5)}` };
+    const seen = this.documents.get(input.idempotency_key);
+    if (seen) return seen;
+    const created = { docflow_id: `DL-${new Date().getFullYear()}-${pad(5000 + input.request_id, 5)}` };
+    this.documents.set(input.idempotency_key, created);
+    return created;
   }
 }

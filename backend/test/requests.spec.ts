@@ -121,7 +121,7 @@ describe("data scope (SPEC §3)", () => {
     expect((await api.get("aigerim", "/requests?scope=team")).status).toBe(403);
     expect((await api.get("erlan", "/requests?scope=all")).status).toBe(403);
     expect((await api.get("erlan", "/requests/6")).status).toBe(403); // Asel is not in his team
-    expect((await api.get("dinara", "/requests?scope=all")).body).toHaveLength(9);
+    expect((await api.get("dinara", "/requests?scope=all")).body).toHaveLength(10);
   });
 
   it("manager's team scope is exactly his direct reports", async () => {

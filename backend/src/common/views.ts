@@ -132,11 +132,16 @@ export const kbArticleView = (a: KbArticle) => ({
   slug: a.slug, title: a.title, category: a.category, body_md: a.body_md, updated_at: a.updated_at,
 });
 
-export const integrationLogView = (l: IntegrationLog) => ({
+export const integrationLogView = (l: IntegrationLog, retryable = false) => ({
   id: l.id,
   system: l.system === "c1_zup" ? ("1c_zup" as const) : l.system,
   operation: l.operation,
   status: l.status,
   details: l.details,
+  request_id: l.request_id,
+  idempotency_key: l.idempotency_key,
+  retry_of: l.retry_of,
+  duration_ms: l.duration_ms,
+  retryable,
   created_at: l.created_at,
 });

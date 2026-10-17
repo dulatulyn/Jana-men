@@ -7,6 +7,16 @@ import type { WorkType } from "@prisma/client";
 
 export const HRIS_ADAPTER = Symbol("HrisAdapter");
 export const DOCS_ADAPTER = Symbol("DocsAdapter");
+export const INTEGRATION_OPTIONS = Symbol("IntegrationOptions");
+
+export interface IntegrationOptions {
+  timeoutMs: number;
+  syncTimeoutMs: number;
+}
+
+export interface CallOptions {
+  signal: AbortSignal;
+}
 
 /** An employee record as the HRIS (1С:ЗУП) reports it. */
 export interface HrisEmployee {
@@ -16,7 +26,7 @@ export interface HrisEmployee {
   position: string;
   department_id: number;
   manager_external_id: string | null;
-  hire_date: string; // YYYY-MM-DD
+  hire_date: string;// YYYY-MM-DD
   vacation_balance_days: number;
   phone: string;
   work_type: WorkType;
@@ -24,6 +34,7 @@ export interface HrisEmployee {
 
 export interface PostVacationInput {
   request_id: number;
+  idempotency_key: string;
   employee_external_id: string;
   start_date: string;
   end_date: string;
@@ -32,6 +43,7 @@ export interface PostVacationInput {
 
 export interface PostAdvanceInput {
   request_id: number;
+  idempotency_key: string;
   employee_external_id: string;
   amount: number;
 }
@@ -39,14 +51,15 @@ export interface PostAdvanceInput {
 /** 1С:ЗУП — source of truth for HR data. We only read employees and post approved documents. */
 export interface HrisAdapter {
   readonly name: string;
-  fetchEmployees(): Promise<HrisEmployee[]>;
+  fetchEmployees(opts?: CallOptions): Promise<HrisEmployee[]>;
   /** Posts an approved vacation; returns the 1С document id and the employee's balance after posting. */
-  postVacation(input: PostVacationInput): Promise<{ external_id: string; vacation_balance_days: number }>;
-  postAdvance(input: PostAdvanceInput): Promise<{ external_id: string }>;
+  postVacation(input: PostVacationInput, opts?: CallOptions): Promise<{ external_id: string; vacation_balance_days: number }>;
+  postAdvance(input: PostAdvanceInput, opts?: CallOptions): Promise<{ external_id: string }>;
 }
 
 export interface CreateDocumentInput {
   request_id: number;
+  idempotency_key: string;
   kind: "vacation_application" | "advance_application";
   employee_full_name: string;
   summary: string;
@@ -55,5 +68,7 @@ export interface CreateDocumentInput {
 /** Documentolog — e-document flow; an approved request becomes an application sent for signature. */
 export interface DocsAdapter {
   readonly name: string;
-  createDocument(input: CreateDocumentInput): Promise<{ docflow_id: string }>;
+  createDocument(input: CreateDocumentInput, opts?: CallOptions): Promise<{ docflow_id: string }>;
 }
+
+export const idempotencyKey = (requestId: number) => `janamen-request-${requestId}`;

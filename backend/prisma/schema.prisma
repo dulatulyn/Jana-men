@@ -63,6 +63,7 @@ enum IntegrationStatus {
   error
 }
 
+
 model User {
   id            Int      @id @default(autoincrement())
   email         String   @unique
@@ -119,19 +120,20 @@ model Department {
 }
 
 model Request {
-  id             Int           @id @default(autoincrement())
+  id             Int            @id @default(autoincrement())
   employee_id    Int
   type           RequestType
-  status         RequestStatus @default(submitted)
+  status         RequestStatus  @default(submitted)
   /// vacation: {start_date, end_date, days, comment} · advance: {amount, reason}
   payload        Json
-  created_at     DateTime      @default(now())
-  updated_at     DateTime      @updatedAt
+  created_at     DateTime       @default(now())
+  updated_at     DateTime       @updatedAt
   docflow_id     String?
   external_1c_id String?
 
-  employee Employee       @relation(fields: [employee_id], references: [id])
-  events   RequestEvent[]
+  employee        Employee         @relation(fields: [employee_id], references: [id])
+  events          RequestEvent[]
+  integrationLogs IntegrationLog[]
 
   @@index([employee_id, status])
   @@index([status])
@@ -274,12 +276,19 @@ model AssistantLog {
 
 /// Журнал вызовов адаптеров интеграций (1С:ЗУП, Documentolog).
 model IntegrationLog {
-  id         Int               @id @default(autoincrement())
-  system     IntegrationSystem
-  operation  String
-  status     IntegrationStatus
-  details    String
-  created_at DateTime          @default(now())
+  id              Int               @id @default(autoincrement())
+  system          IntegrationSystem
+  operation       String
+  status          IntegrationStatus
+  details         String
+  request_id      Int?
+  idempotency_key String?
+  retry_of        Int?
+  duration_ms     Int?
+  created_at      DateTime          @default(now())
 
+  request Request? @relation(fields: [request_id], references: [id], onDelete: SetNull)
+
+  @@index([request_id])
   @@map("integration_log")
 }
