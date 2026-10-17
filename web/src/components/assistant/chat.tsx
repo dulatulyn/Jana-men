@@ -1,9 +1,10 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowUp, BookOpen, CalendarDays, Check, CircleHelp, Forward, Loader2, Lock, ShieldCheck, Wallet, WifiOff, X } from "lucide-react";
+import { ArrowUp, BookOpen, CalendarDays, Check, CircleHelp, Forward, Library, Loader2, Lock, RotateCcw, ShieldCheck, Wallet, WifiOff, X } from "lucide-react";
 import { isApiError } from "@/lib/api";
 import { escalateQuestion } from "@/lib/api/ai";
 import type { AskSource, PrefillAction } from "@/lib/api/types";
@@ -12,6 +13,7 @@ import { useI18n } from "@/i18n";
 import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { daysInclusive, fmtDate, fmtMoney, fmtRange } from "@/lib/format";
+import { kbBody, readMinutes } from "@/lib/kb";
 import { Btn } from "@/components/shared/button";
 import { Markdown } from "@/components/shared/markdown";
 import { LogoMark } from "@/components/brand/logo";
@@ -85,10 +87,12 @@ function SourceChips({ sources, onOpen }: { sources: AskSource[]; onOpen: (s: As
   );
 }
 
-function Thinking() {
+type Tone = "page" | "dock";
+
+function Thinking({ tone }: { tone: Tone }) {
   const { t } = useI18n();
   return (
-    <div className="flex items-center gap-2.5 rounded-[20px] bg-[#f4f6f5] px-4 py-3 text-[14px] text-jm-muted" role="status">
+    <div className={cn("flex items-center gap-2.5 rounded-[20px] px-4 py-3 text-[14px] text-jm-muted", tone === "page" ? "bg-white" : "bg-[#f4f6f5]")} role="status">
       <span className="flex gap-1" aria-hidden>
         {[0, 1, 2].map((i) => (
           <span key={i} className="size-1.5 animate-dot rounded-full bg-jm-green" style={{ animationDelay: `${i * 160}ms` }} />
@@ -101,14 +105,14 @@ function Thinking() {
 
 const Caret = () => <span className="ml-0.5 inline-block h-[1.05em] w-[2px] translate-y-[3px] animate-caret rounded-full bg-jm-green" aria-hidden />;
 
-function AssistantBubble({ m, onSource, onNavigate }: { m: ChatMessage; onSource: (s: AskSource) => void; onNavigate?: () => void }) {
+function AssistantBubble({ m, onSource, onNavigate, tone }: { m: ChatMessage; onSource: (s: AskSource) => void; onNavigate?: () => void; tone: Tone }) {
   const { t } = useI18n();
   const router = useRouter();
   const { me, invalidate } = useSession();
   const { markEscalated } = useAssistant();
   const [busy, setBusy] = useState(false);
 
-  if (m.phase === "thinking") return <Thinking />;
+  if (m.phase === "thinking") return <Thinking tone={tone} />;
   if (m.phase === "failed") {
     return (
       <div className="flex items-start gap-3 rounded-[20px] bg-[#f1f3f2] px-4 py-3.5 text-[14.5px] text-jm-ink/80">
@@ -139,7 +143,11 @@ function AssistantBubble({ m, onSource, onNavigate }: { m: ChatMessage; onSource
   };
 
   return (
-    <div className={cn("min-w-0 rounded-[20px] px-4 py-3.5 sm:px-5 sm:py-4", calm ? "border border-dashed border-[#cfd6d2] bg-[#f8f9f8]" : "bg-[#f4f6f5]")} aria-live={streaming ? "polite" : undefined} aria-busy={streaming}>
+    <div
+      className={cn("min-w-0 rounded-[20px] px-4 py-3.5 sm:px-5 sm:py-4", calm ? "border border-dashed border-[#cfd6d2] bg-[#f8f9f8]" : tone === "page" ? "bg-white" : "bg-[#f4f6f5]")}
+      aria-live={streaming ? "polite" : undefined}
+      aria-busy={streaming}
+    >
       {calm && (
         <p className="mb-1.5 flex items-center gap-2 text-[13px] font-semibold text-jm-muted">
           {meta.status === "refused" ? <Lock className="size-4" /> : <CircleHelp className="size-4" />}
@@ -183,8 +191,8 @@ export function ArticleDialog({ slug, title, onClose }: { slug: string | null; t
   const { t, locale } = useI18n();
   const { data: articles } = useKb();
   const a = articles?.find((x) => x.slug === slug);
-  const body = a ? a.body_md.replace(/^#\s.*\n/, "").trim() : "";
-  const minutes = Math.max(1, Math.round(body.split(/\s+/).length / 180));
+  const body = a ? kbBody(a) : "";
+  const minutes = readMinutes(body);
   const category = a ? (t.assistant.kbCategories as Record<string, string>)[a.category] ?? a.category : null;
   return (
     <Dialog open={!!slug} onOpenChange={(o) => !o && onClose()}>
@@ -243,7 +251,7 @@ export function ArticleDialog({ slug, title, onClose }: { slug: string | null; t
   );
 }
 
-function Composer({ big, onSend, disabled }: { big?: boolean; onSend: (v: string) => void; disabled: boolean }) {
+function Composer({ big, onSend, disabled, surface = "gray" }: { big?: boolean; onSend: (v: string) => void; disabled: boolean; surface?: "gray" | "white" }) {
   const { t } = useI18n();
   const [text, setText] = useState("");
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -261,7 +269,8 @@ function Composer({ big, onSend, disabled }: { big?: boolean; onSend: (v: string
         submit();
       }}
       className={cn(
-        "flex items-end gap-2 rounded-[24px] bg-[#f3f5f4] p-1.5 pl-5 ring-1 ring-transparent transition-shadow focus-within:bg-white focus-within:ring-jm-light",
+        "flex items-end gap-2 p-1.5 pl-5 ring-1 ring-transparent transition-shadow focus-within:ring-jm-light",
+        surface === "white" ? "rounded-[26px] bg-white" : "rounded-[24px] bg-[#f3f5f4] focus-within:bg-white",
         big && "p-2 pl-5",
       )}
     >
@@ -297,8 +306,24 @@ function Composer({ big, onSend, disabled }: { big?: boolean; onSend: (v: string
 
 function Starters({ onPick, compact }: { onPick: (q: string) => void; compact?: boolean }) {
   const { t } = useI18n();
+  if (!compact) {
+    return (
+      <div className="grid gap-2 sm:grid-cols-2">
+        {t.assistant.starters.map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => onPick(s)}
+            className="rounded-[18px] border border-transparent bg-white px-4 py-3.5 text-left text-[15px] font-medium transition-colors hover:border-jm-light/60 hover:text-jm-green-strong"
+          >
+            {s}
+          </button>
+        ))}
+      </div>
+    );
+  }
   return (
-    <div className={cn("grid gap-2", !compact && "sm:grid-cols-2")}>
+    <div className="grid gap-2">
       {t.assistant.starters.map((s) => (
         <button
           key={s}
@@ -327,7 +352,7 @@ function Welcome({ compact }: { compact?: boolean }) {
   );
 }
 
-function Messages({ onSource, onNavigate, className }: { onSource: (s: AskSource) => void; onNavigate?: () => void; className?: string }) {
+function Messages({ onSource, onNavigate, className, tone }: { onSource: (s: AskSource) => void; onNavigate?: () => void; className?: string; tone: Tone }) {
   const { messages } = useAssistant();
   const ref = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
@@ -358,7 +383,7 @@ function Messages({ onSource, onNavigate, className }: { onSource: (s: AskSource
             <div key={m.id} className="flex animate-fade-up items-start gap-3">
               <LogoMark size={30} className="mt-0.5" />
               <div className="@container min-w-0 max-w-[640px] flex-1">
-                <AssistantBubble m={m} onSource={onSource} onNavigate={onNavigate} />
+                <AssistantBubble m={m} onSource={onSource} onNavigate={onNavigate} tone={tone} />
               </div>
             </div>
           ),
@@ -370,7 +395,7 @@ function Messages({ onSource, onNavigate, className }: { onSource: (s: AskSource
 
 export function Chat({ variant = "page", onNavigate }: { variant?: "page" | "dock"; onNavigate?: () => void }) {
   const { t } = useI18n();
-  const { messages, pending, send } = useAssistant();
+  const { messages, pending, send, reset } = useAssistant();
   const [source, setSource] = useState<AskSource | null>(null);
   const empty = messages.length === 0;
 
@@ -391,38 +416,49 @@ export function Chat({ variant = "page", onNavigate }: { variant?: "page" | "doc
             {disclaimer}
           </div>
         ) : (
-          <Messages onSource={setSource} onNavigate={onNavigate} className="px-4 py-5" />
+          <Messages tone="dock" onSource={setSource} onNavigate={onNavigate} className="px-4 py-5" />
         )}
         <div className="shrink-0 border-t border-jm-line bg-white p-3">
           <Composer onSend={(v) => void send(v)} disabled={pending} />
+          <Link
+            href="/assistant/kb"
+            onClick={onNavigate}
+            className="mx-auto mt-2 flex w-fit items-center gap-1.5 text-[12.5px] font-medium text-jm-muted transition-colors hover:text-jm-green"
+          >
+            <Library className="size-3.5" /> {t.assistant.kbTitle}
+          </Link>
         </div>
-        {sheet}
-      </div>
-    );
-  }
-
-  if (empty) {
-    return (
-      <div className="rounded-[20px] bg-white p-5 sm:p-7">
-        <Welcome />
-        <div className="mt-6">
-          <Composer big onSend={(v) => void send(v)} disabled={pending} />
-        </div>
-        <p className="mt-6 mb-2.5 text-[12px] font-semibold tracking-[0.06em] text-jm-muted uppercase">{t.assistant.startersTitle}</p>
-        <Starters onPick={(q) => void send(q)} />
-        <div className="mt-6 border-t border-jm-line pt-4">{disclaimer}</div>
         {sheet}
       </div>
     );
   }
 
   return (
-    <div className="flex h-[calc(100dvh-var(--header-h)-var(--page-y)-96px-env(safe-area-inset-bottom))] min-h-[420px] flex-col overflow-hidden rounded-[20px] bg-white lg:h-[calc(100dvh-var(--header-h)-var(--page-y)*2)]">
-      <Messages onSource={setSource} onNavigate={onNavigate} className="px-4 py-6 sm:px-6" />
-      <div className="shrink-0 border-t border-jm-line p-3 sm:px-5">
-        <div className="mx-auto max-w-[760px]">
-          <Composer onSend={(v) => void send(v)} disabled={pending} />
+    <div className="mx-auto flex h-[calc(100dvh-var(--header-h)-var(--page-y)-96px-env(safe-area-inset-bottom))] min-h-[420px] w-full max-w-[820px] flex-col lg:h-[calc(100dvh-var(--header-h)-var(--page-y)*2)]">
+      {empty ? (
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="flex min-h-full flex-col pt-4 sm:justify-center sm:pt-0 sm:pb-16">
+            <Welcome />
+            <div className="mt-6">
+              <Starters onPick={(q) => void send(q)} />
+            </div>
+            <div className="mt-5">{disclaimer}</div>
+          </div>
         </div>
+      ) : (
+        <Messages tone="page" onSource={setSource} onNavigate={onNavigate} className="pt-2 pb-4" />
+      )}
+      <div className="shrink-0 pt-2 pb-1">
+        <Composer surface="white" onSend={(v) => void send(v)} disabled={pending} />
+        {!empty && (
+          <button
+            type="button"
+            onClick={reset}
+            className="mx-auto mt-2 flex items-center gap-1.5 text-[12.5px] font-medium text-jm-muted transition-colors hover:text-jm-green"
+          >
+            <RotateCcw className="size-3.5" /> {t.assistant.newChat}
+          </button>
+        )}
       </div>
       {sheet}
     </div>
