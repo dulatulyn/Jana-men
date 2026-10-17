@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import { ChevronRight, Loader2, RotateCcw, Check } from "lucide-react";
-import { API_MODE, isApiError, resetMockData } from "@/lib/api";
+import { ChevronRight, Loader2, Check } from "lucide-react";
+import { isApiError } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { useI18n } from "@/i18n";
 import { Logo } from "@/components/brand/logo";
@@ -84,10 +83,8 @@ export default function LoginPage() {
     <div className="min-h-dvh bg-jm-page lg:grid lg:grid-cols-[minmax(420px,5fr)_7fr]">
       <section className="relative overflow-hidden bg-jm-green px-6 pt-6 pb-10 text-white lg:flex lg:flex-col lg:justify-between lg:px-14 lg:py-12">
         <div className="flex items-center justify-between">
-          <span className="text-[22px] lg:text-[26px]">
-            <Logo tone="white" />
-          </span>
-          <LangSwitch className="bg-white/15 lg:hidden [&_button[aria-pressed=false]]:text-white/80 [&_button[aria-pressed=true]]:bg-white [&_button[aria-pressed=true]]:text-jm-green" />
+          <Logo tone="white" size={36} />
+          <LangSwitch className="bg-white/15 lg:hidden [&_button[aria-pressed=false]]:text-white/85 [&_button[aria-pressed=true]]:text-jm-green" />
         </div>
         <div className="mt-8 max-w-md lg:mt-0">
           <h1 className="text-[30px] leading-[1.08] font-extrabold tracking-[-0.03em] lg:text-[46px]">{t.login.tagline}</h1>
@@ -106,7 +103,7 @@ export default function LoginPage() {
       <section className="flex items-start justify-center px-4 pb-10 lg:items-center lg:px-10">
         <div className="-mt-5 w-full max-w-[460px] lg:mt-0">
           <div className="mb-4 hidden justify-end lg:flex">
-            <LangSwitch />
+            <LangSwitch className="bg-[#e7ebe9]" />
           </div>
           <div className="rounded-[24px] bg-white p-5 sm:p-7">
             <h2 className="text-[22px] font-bold tracking-tight">{t.login.title}</h2>
@@ -175,17 +172,6 @@ export default function LoginPage() {
             </ul>
           </div>
 
-          {API_MODE === "mock" && (
-            <button
-              onClick={() => {
-                resetMockData();
-                toast.success(t.login.resetDone);
-              }}
-              className="mx-auto mt-5 flex items-center gap-1.5 text-[13px] font-medium text-jm-muted hover:text-jm-green"
-            >
-              <RotateCcw className="size-3.5" /> {t.login.reset}
-            </button>
-          )}
         </div>
       </section>
     </div>

@@ -110,6 +110,56 @@
   --sidebar-accent-foreground: var(--jm-green-strong);
   --sidebar-border: var(--jm-line);
   --sidebar-ring: var(--jm-light);
+
+  --sidebar-w: 248px;
+  --header-h: 56px;
+  --page-x: 16px;
+  --page-y: 16px;
+  --gutter: 12px;
+  --content-max: 1440px;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --page-x: 24px;
+    --page-y: 20px;
+    --gutter: 16px;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --header-h: 64px;
+    --page-x: 32px;
+    --page-y: 24px;
+    --gutter: 20px;
+  }
+}
+
+@utility page-container {
+  width: 100%;
+  max-width: calc(var(--content-max) + var(--page-x) * 2);
+  margin-inline: auto;
+  padding-inline: var(--page-x);
+}
+
+@utility grid-12 {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--gutter);
+}
+
+@utility stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gutter);
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @layer base {
@@ -167,6 +217,53 @@
   .jm-prose strong {
     @apply font-semibold text-jm-ink;
   }
+}
+
+@keyframes jm-caret {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  55%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes jm-dot {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  40% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+@keyframes jm-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@utility animate-caret {
+  animation: jm-caret 1.05s ease-in-out infinite;
+}
+
+@utility animate-dot {
+  animation: jm-dot 1.2s ease-in-out infinite;
+}
+
+@utility animate-fade-up {
+  animation: jm-fade-up 0.28s ease-out both;
 }
 
 @media (prefers-reduced-motion: reduce) {

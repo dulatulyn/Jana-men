@@ -1,27 +1,28 @@
-import { HardHat, Package, BookOpen } from "lucide-react";
+import Image from "next/image";
+import { BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const COVERS: Record<string, string> = {
+  onboarding: "/covers/onboarding.svg",
+  safety: "/covers/safety.svg",
+  service: "/covers/service.svg",
+};
+
 export function CourseCover({ cover, className, size = "md" }: { cover: string; className?: string; size?: "sm" | "md" }) {
-  const cls = size === "sm" ? "size-6" : "size-9";
-  const icon = cover === "safety" ? <HardHat className={cls} strokeWidth={1.6} /> : cover === "onboarding" ? <Package className={cls} strokeWidth={1.6} /> : <BookOpen className={cls} strokeWidth={1.6} />;
+  const src = COVERS[cover];
   return (
     <div
       className={cn(
-        "relative flex shrink-0 items-center justify-center overflow-hidden",
-        cover === "safety" ? "bg-[#fff2dc] text-[#b86e00]" : "bg-jm-mint text-jm-green",
-        size === "sm" ? "size-12 rounded-2xl" : "h-[120px] rounded-[18px]",
+        "relative flex shrink-0 items-center justify-center overflow-hidden bg-jm-mint text-jm-green",
+        size === "sm" ? "size-12 rounded-2xl" : "h-[120px] rounded-[16px]",
         className,
       )}
     >
-      <svg className="absolute inset-0 h-full w-full opacity-[0.18]" aria-hidden>
-        <defs>
-          <pattern id={`p-${cover}`} width="14" height="14" patternUnits="userSpaceOnUse">
-            <circle cx="2" cy="2" r="1.2" fill="currentColor" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill={`url(#p-${cover})`} />
-      </svg>
-      <span className="relative">{icon}</span>
+      {src ? (
+        <Image src={src} alt="" aria-hidden fill unoptimized sizes={size === "sm" ? "48px" : "(min-width: 1024px) 480px, 100vw"} className="object-cover" />
+      ) : (
+        <BookOpen className={size === "sm" ? "size-6" : "size-9"} strokeWidth={1.6} />
+      )}
     </div>
   );
 }

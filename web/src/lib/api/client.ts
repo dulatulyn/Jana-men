@@ -2,14 +2,17 @@ import type {
   AssignCourseBody,
   AssistantStats,
   CalendarEntry,
+  CalendarParams,
   Course,
   CourseDetail,
   CreateRequestBody,
   Dashboard,
+  EmployeeDetail,
   Enrollment,
   HRRequest,
   IntegrationLogEntry,
   KbArticle,
+  KbUpsertBody,
   LoginResponse,
   Me,
   Notification,
@@ -18,7 +21,9 @@ import type {
   RequestDetail,
   RequestListItem,
   RequestListParams,
+  RetryResult,
   SyncResult,
+  TeamAcademyCourse,
   TeamMember,
   UnansweredQuestion,
 } from "./types";
@@ -34,9 +39,10 @@ export interface ApiClient {
   approveRequest(id: number, comment?: string): Promise<HRRequest>;
   rejectRequest(id: number, comment: string): Promise<HRRequest>;
   cancelRequest(id: number): Promise<HRRequest>;
-  teamCalendar(from?: string, to?: string): Promise<CalendarEntry[]>;
+  teamCalendar(params?: CalendarParams): Promise<CalendarEntry[]>;
   team(): Promise<TeamMember[]>;
-  employee(id: number): Promise<TeamMember>;
+  teamAcademy(): Promise<TeamAcademyCourse[]>;
+  employee(id: number): Promise<EmployeeDetail>;
   courses(): Promise<Course[]>;
   myEnrollments(): Promise<Enrollment[]>;
   course(id: number): Promise<CourseDetail>;
@@ -47,9 +53,11 @@ export interface ApiClient {
   readNotification(id: number): Promise<void>;
   readAllNotifications(): Promise<void>;
   kb(): Promise<KbArticle[]>;
-  escalate(logId: number, question?: string): Promise<void>;
+  upsertKb(slug: string, body: KbUpsertBody): Promise<KbArticle>;
+  escalate(logId: number): Promise<void>;
   unanswered(): Promise<UnansweredQuestion[]>;
   assistantStats(): Promise<AssistantStats>;
   sync1c(): Promise<SyncResult>;
   integrationsLog(): Promise<IntegrationLogEntry[]>;
+  retryIntegration(id: number): Promise<RetryResult>;
 }

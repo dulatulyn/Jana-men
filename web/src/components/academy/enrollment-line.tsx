@@ -7,6 +7,8 @@ import { useI18n } from "@/i18n";
 import { fmtDate } from "@/lib/format";
 import { Pill } from "@/components/shared/ui";
 import { Segments } from "./segments";
+import { cn } from "@/lib/utils";
+import { isOverdue } from "@/lib/team";
 
 export function EnrollmentLine({ e, link = true }: { e: Enrollment; link?: boolean }) {
   const { t, locale } = useI18n();
@@ -30,14 +32,17 @@ export function EnrollmentLine({ e, link = true }: { e: Enrollment; link?: boole
         ) : (
           <div className="mt-2 flex items-center gap-3">
             <Segments value={e.progress_pct} className="flex-1" />
-            {e.due_date && <span className="shrink-0 text-[12.5px] font-medium text-jm-amber">{t.academy.due(fmtDate(e.due_date, locale, { day: "numeric", month: "short" }))}</span>}
+            {e.due_date && (
+              <span className={cn("shrink-0 text-[12.5px] font-medium", isOverdue(e) ? "text-jm-red" : "text-jm-amber")}>
+                {isOverdue(e) ? t.academy.overdue : t.academy.due(fmtDate(e.due_date, locale, { day: "numeric", month: "short" }))}
+              </span>
+            )}
           </div>
         )}
       </div>
     </Wrap>
   );
 }
-
 
 function Wrap({ href, className, children }: { href?: string; className: string; children: React.ReactNode }) {
   return href ? (

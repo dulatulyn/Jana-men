@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#23A01F"/>
+      <stop offset="1" stop-color="#146B12"/>
+    </linearGradient>
+    <linearGradient id="hill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4BCA85"/>
+      <stop offset="1" stop-color="#329B64"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="400" fill="url(#bg)"/>
+  <circle cx="470" cy="92" r="46" fill="#DEFAEB" opacity="0.9"/>
+  <circle cx="470" cy="92" r="70" fill="#DEFAEB" opacity="0.12"/>
+  <g fill="#FFFFFF" opacity="0.08">
+    <circle cx="80" cy="70" r="120"/>
+    <circle cx="560" cy="380" r="140"/>
+  </g>
+  <path d="M0 300 C120 250 220 270 320 290 C420 310 500 270 600 250 L600 400 L0 400 Z" fill="url(#hill)"/>
+  <path d="M0 330 C140 300 260 320 360 336 C460 352 530 330 600 318 L600 400 L0 400 Z" fill="#1B8918"/>
+  <path d="M60 318 C160 280 260 300 330 250 C380 214 430 200 500 170" fill="none" stroke="#DEFAEB" stroke-width="5" stroke-linecap="round" stroke-dasharray="2 16" opacity="0.9"/>
+  <g transform="translate(486 112)">
+    <path d="M0 58 C-18 34 -26 22 -26 8 A26 26 0 0 1 26 8 C26 22 18 34 0 58 Z" fill="#FFFFFF"/>
+    <circle cx="0" cy="8" r="10" fill="#1B8918"/>
+  </g>
+  <g transform="translate(150 196)">
+    <ellipse cx="135" cy="118" rx="150" ry="10" fill="#0E4F0C" opacity="0.35"/>
+    <rect x="0" y="10" width="190" height="96" rx="16" fill="#FFFFFF"/>
+    <path d="M190 30 H232 C240 30 246 34 250 40 L276 78 C279 82 280 86 280 90 V96 C280 101 276 106 270 106 H190 Z" fill="#FFFFFF"/>
+    <path d="M200 42 H232 L254 76 H200 Z" fill="#BFE9D2"/>
+    <rect x="0" y="62" width="190" height="16" fill="#1B8918"/>
+    <text x="22" y="50" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" fill="#1B8918">JAŃA</text>
+    <circle cx="56" cy="108" r="22" fill="#16211B"/>
+    <circle cx="56" cy="108" r="9" fill="#DEFAEB"/>
+    <circle cx="226" cy="108" r="22" fill="#16211B"/>
+    <circle cx="226" cy="108" r="9" fill="#DEFAEB"/>
+    <rect x="268" y="84" width="12" height="8" rx="3" fill="#FFD166"/>
+  </g>
+  <g transform="translate(62 214)">
+    <rect x="0" y="40" width="64" height="58" rx="6" fill="#E3B06F"/>
+    <rect x="28" y="40" width="8" height="58" fill="#C98F48"/>
+    <rect x="10" y="0" width="52" height="42" rx="6" fill="#EDC48C"/>
+    <rect x="32" y="0" width="8" height="42" fill="#D29D57"/>
+  </g>
+  <g transform="translate(470 240)">
+    <rect x="0" y="18" width="56" height="50" rx="6" fill="#EDC48C"/>
+    <rect x="24" y="18" width="8" height="50" fill="#D29D57"/>
+  </g>
+</svg>

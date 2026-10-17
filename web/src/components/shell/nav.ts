@@ -11,20 +11,28 @@ export interface NavItem {
   badge?: "approvals" | "notifications";
 }
 
-export function navFor(role: Role, t: Dict): NavItem[] {
-  const items: NavItem[] = [{ href: "/dashboard", label: t.nav.home, icon: House }];
-  if (role !== "employee") items.push({ href: "/approvals", label: t.nav.approvals, icon: ClipboardCheck, badge: "approvals" });
-  items.push({ href: "/requests", label: t.nav.requests, short: t.nav.requestsShort, icon: FileText });
-  if (role === "manager") items.push({ href: "/team", label: t.nav.team, icon: Users });
-  if (role === "hr") items.push({ href: "/hr", label: t.nav.hr, icon: LayoutDashboard });
-  items.push(
+export interface NavGroup {
+  label?: string;
+  items: NavItem[];
+}
+
+export function navGroups(role: Role, t: Dict): NavGroup[] {
+  const home: NavItem = { href: "/dashboard", label: t.nav.home, icon: House };
+  const personal: NavItem[] = [
+    { href: "/requests", label: t.nav.requests, short: t.nav.requestsShort, icon: FileText },
     { href: "/academy", label: t.nav.academy, icon: GraduationCap },
     { href: "/assistant", label: t.nav.assistant, short: t.nav.assistantShort, icon: MessagesSquare },
     { href: "/notifications", label: t.nav.notifications, icon: Bell, badge: "notifications" },
     { href: "/profile", label: t.nav.profile, icon: UserRound },
-  );
-  return items;
+  ];
+  if (role === "employee") return [{ items: [home, ...personal] }];
+  const manage: NavItem[] = [{ href: "/approvals", label: t.nav.approvals, icon: ClipboardCheck, badge: "approvals" }];
+  if (role === "manager") manage.push({ href: "/team", label: t.nav.team, short: t.nav.teamShort, icon: Users });
+  if (role === "hr") manage.push({ href: "/hr", label: t.nav.hr, icon: LayoutDashboard });
+  return [{ items: [home] }, { label: t.nav.groupManage, items: manage }, { label: t.nav.groupPersonal, items: personal }];
 }
+
+export const navFor = (role: Role, t: Dict) => navGroups(role, t).flatMap((g) => g.items);
 
 export function bottomFor(role: Role, t: Dict) {
   const all = navFor(role, t);
@@ -32,9 +40,11 @@ export function bottomFor(role: Role, t: Dict) {
   const main =
     role === "employee"
       ? ["/dashboard", "/requests", "/assistant", "/academy", "/profile"]
-      : ["/dashboard", "/approvals", "/assistant", "/academy"];
+      : role === "manager"
+        ? ["/dashboard", "/approvals", "/team", "/assistant"]
+        : ["/dashboard", "/approvals", "/hr", "/assistant"];
   const items = main.map(pick);
-  const rest = all.filter((i) => !main.includes(i.href) && i.href !== "/notifications");
+  const rest = all.filter((i) => !main.includes(i.href));
   return { items, rest };
 }
 

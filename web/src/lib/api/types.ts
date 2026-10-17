@@ -17,7 +17,6 @@ export interface PersonRef {
   full_name: string;
 }
 
-
 export interface AuthUser {
   id: number;
   role: Role;
@@ -50,7 +49,6 @@ export interface Me extends AuthUser {
   employee: Employee;
 }
 
-
 export interface Profile {
   full_name: string;
   company: string;
@@ -76,7 +74,6 @@ export interface Dashboard {
   enrollments: Enrollment[];
   unread_notifications: number;
 }
-
 
 export interface VacationPayload {
   start_date: string;
@@ -143,8 +140,23 @@ export interface CalendarEntry {
   start_date: string;
   end_date: string;
   status: RequestStatus;
+  request_id?: number;
 }
 
+export interface CalendarParams {
+  from?: string;
+  to?: string;
+  department_id?: number;
+}
+
+export interface VacationSpan {
+  start_date: string;
+  end_date: string;
+}
+
+export interface NextVacation extends VacationSpan {
+  status: RequestStatus;
+}
 
 export interface TeamMember {
   id: number;
@@ -155,8 +167,37 @@ export interface TeamMember {
   hire_date: string;
   vacation_balance_days: number;
   enrollments: Enrollment[];
+  department_id?: number;
+  pending_requests?: number;
+  on_vacation?: VacationSpan | null;
+  next_vacation?: NextVacation | null;
 }
 
+export interface EmployeeDetail extends TeamMember {
+  requests?: RequestListItem[];
+}
+
+export interface TeamAcademyMember {
+  employee: PersonRef;
+  enrollment_id: number;
+  status: EnrollmentStatus;
+  progress: number;
+  due_date: string | null;
+  overdue: boolean;
+  score: number | null;
+  completed_at: string | null;
+}
+
+export interface TeamAcademyCourse {
+  course: Pick<Course, "id" | "title" | "cover" | "duration_min">;
+  assigned: number;
+  completed: number;
+  in_progress: number;
+  not_started: number;
+  overdue: number;
+  members: TeamAcademyMember[];
+  unassigned: PersonRef[];
+}
 
 export interface Course {
   id: number;
@@ -213,7 +254,6 @@ export interface AssignCourseBody {
   due_date: string | null;
 }
 
-
 export interface Notification {
   id: number;
   user_id: number;
@@ -224,7 +264,6 @@ export interface Notification {
   read_at: string | null;
   created_at: string;
 }
-
 
 export interface KbArticle {
   slug: string;
@@ -248,7 +287,6 @@ export interface AssistantStats {
   escalated: number;
 }
 
-
 export interface SyncResult {
   synced: number;
   at: string;
@@ -261,8 +299,18 @@ export interface IntegrationLogEntry {
   status: "ok" | "error";
   details: string;
   created_at: string;
+  request_id?: number | null;
+  idempotency_key?: string | null;
+  retry_of?: number | null;
+  duration_ms?: number | null;
+  retryable?: boolean;
 }
 
+export interface RetryResult {
+  entry: IntegrationLogEntry;
+  request: Pick<HRRequest, "id" | "status" | "external_1c_id" | "docflow_id"> | null;
+  sync: { synced: number; changed: number; at: string } | null;
+}
 
 export type AskStatus = "answered" | "no_answer" | "refused";
 
@@ -285,13 +333,21 @@ export interface AskResponse {
   action: PrefillAction | null;
   can_escalate: boolean;
   log_id: number | null;
+  mode?: "llm" | "fallback";
+}
+
+export type AskMeta = Omit<AskResponse, "answer">;
+
+export interface KbUpsertBody {
+  title?: string;
+  category?: string;
+  body_md?: string;
 }
 
 export interface ChatTurn {
   role: "user" | "assistant";
   content: string;
 }
-
 
 export interface ApiErrorBody {
   error: { code: string; message: string };

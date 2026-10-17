@@ -4,14 +4,15 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Check, CircleCheck, CircleX, Clock, Loader2, Lock, ListChecks, Trophy, ArrowRight, RotateCcw } from "lucide-react";
+import { Check, CircleCheck, CircleX, Loader2, Lock, ListChecks, Trophy, ArrowRight, RotateCcw } from "lucide-react";
 import { api, isApiError } from "@/lib/api";
 import type { CourseDetail, QuizResult } from "@/lib/api/types";
 import { useApi } from "@/hooks/use-api";
 import { useSession } from "@/lib/session";
 import { useI18n } from "@/i18n";
 import { cn } from "@/lib/utils";
-import { BackLink, Card, ErrorState, Skeleton } from "@/components/shared/ui";
+import { Card, ErrorState, Skeleton } from "@/components/shared/ui";
+import { PageHeader } from "@/components/shell/page-header";
 import { Btn } from "@/components/shared/button";
 import { Markdown } from "@/components/shared/markdown";
 import { Segments } from "@/components/academy/segments";
@@ -27,7 +28,7 @@ function firstStep(c: CourseDetail): Step {
   return { kind: "quiz" };
 }
 
-function Quiz({ course, onDone }: { course: CourseDetail; onDone: (r: QuizResult) => void }) {
+function Quiz({ course }: { course: CourseDetail }) {
   const { t } = useI18n();
   const { invalidate } = useSession();
   const [answers, setAnswers] = useState<(number | null)[]>(course.quiz.map(() => null));
@@ -43,7 +44,6 @@ function Quiz({ course, onDone }: { course: CourseDetail; onDone: (r: QuizResult
       setResult(r);
       invalidate();
       window.scrollTo({ top: 0, behavior: "smooth" });
-      onDone(r);
       if (r.passed) toast.success(`${t.academy.passed} · ${r.score}%`);
     } catch (e) {
       toast.error(isApiError(e) ? e.message : t.common.error);
@@ -150,8 +150,25 @@ export default function CoursePage() {
   const [step, setStep] = useState<Step | null>(null);
   const [busy, setBusy] = useState(false);
 
-  if (error) return <ErrorState error={error} />;
-  if (!c || !me) return <Skeleton className="h-[520px]" />;
+  const back = { href: "/academy", label: t.academy.title };
+  if (error)
+    return (
+      <div className="stack">
+        <PageHeader title={t.academy.title} back={back} />
+        <ErrorState error={error} />
+      </div>
+    );
+  if (!c || !me)
+    return (
+      <div className="stack">
+        <PageHeader title={t.academy.title} back={back} />
+        <Skeleton className="h-[140px] rounded-[20px]" />
+        <div className="grid-12">
+          <Skeleton className="col-span-12 h-[260px] rounded-[20px] lg:col-span-4 xl:col-span-3" />
+          <Skeleton className="col-span-12 h-[420px] rounded-[20px] lg:col-span-8 xl:col-span-9" />
+        </div>
+      </div>
+    );
 
   const cur = step ?? firstStep(c);
   const e = c.enrollment;
@@ -190,21 +207,15 @@ export default function CoursePage() {
   const lesson = cur.kind === "lesson" ? c.lessons[cur.index] : null;
 
   return (
-    <div className="mx-auto max-w-[1080px]">
-      <BackLink href="/academy" label={t.academy.title} />
-      <Card className="mb-4 flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:p-5">
-        <CourseCover cover={c.cover} size="sm" className="hidden sm:flex" />
+    <div className="stack">
+      <PageHeader title={c.title} back={back} subtitle={`${t.common.minutes(c.duration_min)} · ${t.academy.lessons(c.lessons.length)} + ${t.academy.quiz.toLowerCase()}`} />
+      <Card className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:p-5">
+        <CourseCover cover={c.cover} className="hidden aspect-[3/2] h-auto w-[132px] sm:flex" />
         <div className="min-w-0 flex-1">
-          <h1 className="text-[21px] leading-tight font-bold tracking-tight sm:text-[24px]">{c.title}</h1>
-          <p className="mt-1 flex flex-wrap items-center gap-x-3 text-[13.5px] text-jm-muted">
-            <span className="flex items-center gap-1">
-              <Clock className="size-3.5" /> {t.common.minutes(c.duration_min)}
-            </span>
-            <span>{t.academy.lessons(c.lessons.length)} + {t.academy.quiz.toLowerCase()}</span>
-          </p>
+          <p className="text-[15px] leading-snug text-jm-ink/80">{c.description}</p>
         </div>
         {e ? (
-          <div className="sm:w-[240px]">
+          <div className="sm:w-[260px]">
             <div className="mb-1.5 flex justify-between text-[13px]">
               <span className="text-jm-muted">{t.academy.progress}</span>
               <span className="font-semibold text-jm-green tabular">{e.progress_pct}%</span>
@@ -219,8 +230,11 @@ export default function CoursePage() {
         )}
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
-        <nav className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] lg:sticky lg:top-24 lg:mx-0 lg:block lg:space-y-1 lg:self-start lg:overflow-visible lg:rounded-[20px] lg:bg-white lg:p-2">
+      <div className="grid-12">
+        <nav
+          aria-label={t.academy.lessonsNav}
+          className="scrollbar-none col-span-12 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 lg:sticky lg:top-[calc(var(--header-h)+var(--page-y))] lg:col-span-4 lg:block lg:space-y-1 lg:self-start lg:overflow-visible lg:rounded-[20px] lg:bg-white lg:p-2 xl:col-span-3"
+        >
           {c.lessons.map((l, i) => {
             const active = cur.kind === "lesson" && cur.index === i;
             const isDone = done.has(l.id);
@@ -260,10 +274,14 @@ export default function CoursePage() {
           </button>
         </nav>
 
-        <Card className="p-5 sm:p-8">
+        <Card className="col-span-12 p-5 sm:p-8 lg:col-span-8 xl:col-span-9">
           {!e ? (
-            <div className="py-8 text-center">
-              <p className="text-[15px] text-jm-muted">{c.description}</p>
+            <div className="flex flex-col items-center py-10 text-center">
+              <p className="max-w-md text-[15px] text-jm-muted">{t.academy.enrollHint}</p>
+              <Btn className="mt-5" onClick={enroll} disabled={busy}>
+                {busy && <Loader2 className="animate-spin" />}
+                {t.academy.enroll}
+              </Btn>
             </div>
           ) : lesson ? (
             <article>
@@ -284,7 +302,7 @@ export default function CoursePage() {
           ) : (
             <div>
               <h2 className="mb-1 text-[22px] font-bold tracking-tight sm:text-[26px]">{t.academy.quiz}</h2>
-              {!allLessons && !completed ? <p className="text-jm-muted">{t.academy.lockedQuiz}</p> : <Quiz course={c} onDone={() => {}} />}
+              {!allLessons && !completed ? <p className="text-jm-muted">{t.academy.lockedQuiz}</p> : <Quiz course={c} />}
             </div>
           )}
         </Card>

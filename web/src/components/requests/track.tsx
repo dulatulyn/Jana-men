@@ -43,7 +43,7 @@ function legs(status: RequestStatus) {
   }
 }
 
-export function TrackBar({ status, labels = false, className }: { status: RequestStatus; labels?: boolean; className?: string }) {
+export function TrackBar({ status, labels = false, className, size = "md" }: { status: RequestStatus; labels?: boolean; className?: string; size?: "md" | "lg" }) {
   const { t } = useI18n();
   const done = legs(status);
   const failed = status === "rejected";
@@ -56,7 +56,7 @@ export function TrackBar({ status, labels = false, className }: { status: Reques
           const filled = i < done;
           const current = !failed && !stopped && i === done && done < 4;
           return (
-            <div key={i} className="relative h-[6px] flex-1 rounded-full bg-[#e6ebe8]">
+            <div key={i} className={cn("relative flex-1 rounded-full bg-[#e6ebe8]", size === "lg" ? "h-2" : "h-[6px]")}>
               <div
                 className={cn(
                   "absolute inset-y-0 left-0 rounded-full transition-[width] duration-700",
@@ -84,7 +84,7 @@ export function TrackBar({ status, labels = false, className }: { status: Reques
         })}
       </div>
       {labels && (
-        <div className="mt-2 grid grid-cols-4 gap-1 text-[11px] leading-tight text-jm-muted">
+        <div className={cn("grid grid-cols-4 gap-1 leading-tight text-jm-muted", size === "lg" ? "mt-3 text-[12.5px] font-medium" : "mt-2 text-[11px]")}>
           {[t.track.submitted, t.track.manager, t.track.hr, "1С:ЗУП"].map((l, i) => (
             <span key={i} className={cn(i < done && !stopped && "text-jm-green-strong", i === 3 && "text-right")}>
               {l}

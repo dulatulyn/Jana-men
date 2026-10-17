@@ -7,13 +7,15 @@ import type { DateRange } from "react-day-picker";
 import { kk as kkLocale, ru as ruLocale } from "react-day-picker/locale";
 import { CalendarDays, Loader2, Sparkles, Wallet, Route, Info } from "lucide-react";
 import { api, isApiError } from "@/lib/api";
-import { useApi } from "@/hooks/use-api";
+import { useProfile } from "@/hooks/queries";
 import { useSession } from "@/lib/session";
 import { useI18n } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { daysInclusive, fmtDate, fmtMoney, toISODate } from "@/lib/format";
 import { Calendar } from "@/components/ui/calendar";
-import { BackLink, Card, PageTitle, Skeleton } from "@/components/shared/ui";
+import { Card, Skeleton } from "@/components/shared/ui";
+import { PageHeader } from "@/components/shell/page-header";
+import { useMedia } from "@/hooks/use-media";
 import { Btn } from "@/components/shared/button";
 
 const parseISO = (s: string | null) => (s && /^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(s + "T00:00:00") : undefined);
@@ -25,12 +27,13 @@ function TypeSwitch({ value, onChange }: { value: "vacation" | "advance"; onChan
     { v: "advance", label: t.form.advance, icon: Wallet },
   ] as const;
   return (
-    <div className="inline-flex rounded-full bg-white p-1" role="tablist">
+    <div className="inline-flex rounded-full bg-white p-1" role="radiogroup" aria-label={t.form.title}>
       {opts.map((o) => (
         <button
           key={o.v}
-          role="tab"
-          aria-selected={value === o.v}
+          type="button"
+          role="radio"
+          aria-checked={value === o.v}
           onClick={() => onChange(o.v)}
           className={cn(
             "flex h-10 items-center gap-2 rounded-full px-5 text-[15px] font-semibold transition-colors",
@@ -63,7 +66,8 @@ function NewRequestForm() {
   const router = useRouter();
   const { t, locale } = useI18n();
   const { invalidate } = useSession();
-  const { data: profile } = useApi(() => api.profile());
+  const { data: profile } = useProfile();
+  const twoMonths = useMedia("(min-width: 1280px)");
 
   const fromAssistant = sp.get("from") === "assistant";
   const [type, setType] = useState<"vacation" | "advance">(sp.get("type") === "advance" ? "advance" : "vacation");
@@ -110,58 +114,76 @@ function NewRequestForm() {
     }
   };
 
+  const summary = (
+    <div className="grid grid-cols-2 gap-3">
+      <div>
+        <p className="text-[12.5px] font-medium text-jm-muted">{t.form.start}</p>
+        <p className="mt-0.5 text-[16px] font-semibold">{start ? fmtDate(start, locale, { day: "numeric", month: "short", weekday: "short" }) : "—"}</p>
+      </div>
+      <div>
+        <p className="text-[12.5px] font-medium text-jm-muted">{t.form.end}</p>
+        <p className="mt-0.5 text-[16px] font-semibold">{end ? fmtDate(end, locale, { day: "numeric", month: "short", weekday: "short" }) : "—"}</p>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="mx-auto max-w-[880px]">
-      <PageTitle title={t.form.title} back={<BackLink href="/requests" label={t.nav.requests} />} />
+    <div className="stack">
+      <PageHeader title={t.form.title} back={{ href: "/requests", label: t.nav.requests }} subtitle={t.form.subtitle} />
 
       {fromAssistant && (
-        <div className="mb-4 flex items-center gap-3 rounded-[18px] bg-jm-mint px-4 py-3 text-[14px] font-medium text-jm-green-strong">
+        <div className="flex items-center gap-3 rounded-[18px] bg-jm-mint px-4 py-3 text-[14px] font-medium text-jm-green-strong">
           <Sparkles className="size-[18px] shrink-0" /> {t.form.prefilled}
         </div>
       )}
 
-      <div className="mb-4">
-        <TypeSwitch value={type} onChange={(v) => { setType(v); setError(null); }} />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <TypeSwitch
+          value={type}
+          onChange={(v) => {
+            setType(v);
+            setError(null);
+          }}
+        />
+        <p className="hidden items-center gap-2 text-[13px] text-jm-muted sm:flex">
+          <Route className="size-4 text-jm-green" /> {t.form.route}
+        </p>
       </div>
 
       {type === "vacation" ? (
-        <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-          <Card className="p-3 sm:p-5">
-            <p className="px-2 text-[16px] font-semibold">{t.form.pickDates}</p>
-            <p className="px-2 text-[13px] text-jm-muted">{t.form.pickHint}</p>
-            <div className="mt-2 flex justify-center">
+        <div className="grid-12">
+          <Card className="col-span-12 p-4 sm:p-6 lg:col-span-7 xl:col-span-8">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <p className="text-[16px] font-semibold">{t.form.pickDates}</p>
+              <p className="text-[13px] text-jm-muted">{t.form.pickHint}</p>
+            </div>
+            <div className="mt-4 flex justify-center">
               <Calendar
                 mode="range"
                 selected={range}
                 onSelect={setRange}
-                numberOfMonths={1}
+                numberOfMonths={twoMonths ? 2 : 1}
                 defaultMonth={range?.from ?? today}
                 disabled={{ before: today }}
                 locale={locale === "kk" ? kkLocale : ruLocale}
                 weekStartsOn={1}
-                className="bg-transparent p-0 [--cell-radius:999px] [--cell-size:--spacing(10.5)] [--muted:var(--jm-mint)] sm:[--cell-size:--spacing(12)]"
-                classNames={{ caption_label: "text-[15px] font-semibold capitalize", weekday: "flex-1 text-[12px] font-medium text-jm-muted uppercase" }}
+                className={cn(
+                  "bg-transparent p-0 [--cell-radius:999px] [--muted:var(--jm-mint)]",
+                  twoMonths ? "[--cell-size:--spacing(11)]" : "[--cell-size:--spacing(10.5)] sm:[--cell-size:--spacing(12)]",
+                )}
+                classNames={{ caption_label: "text-[15px] font-semibold capitalize", weekday: "flex-1 text-[12px] font-medium text-jm-muted uppercase", months: "relative flex flex-col gap-8 md:flex-row" }}
               />
             </div>
           </Card>
 
-          <div className="space-y-4">
-            <Card className="p-5">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-[12px] font-medium text-jm-muted">{t.form.start}</p>
-                  <p className="mt-0.5 text-[15px] font-semibold">{start ? fmtDate(start, locale, { day: "numeric", month: "short" }) : "—"}</p>
-                </div>
-                <div>
-                  <p className="text-[12px] font-medium text-jm-muted">{t.form.end}</p>
-                  <p className="mt-0.5 text-[15px] font-semibold">{end ? fmtDate(end, locale, { day: "numeric", month: "short" }) : "—"}</p>
-                </div>
-              </div>
-              <div className="mt-4 rounded-2xl bg-[#f5f7f6] p-4">
+          <div className="col-span-12 flex flex-col gap-(--gutter) lg:col-span-5 xl:col-span-4">
+            <Card className="p-5 sm:p-6">
+              {summary}
+              <div className="mt-5 rounded-2xl bg-[#f5f7f6] p-4">
                 <p className="flex items-baseline gap-1.5">
-                  <span className={cn("text-[34px] leading-none font-extrabold tracking-[-0.04em] tabular", over ? "text-jm-red" : "text-jm-green")}>{days}</span>
+                  <span className={cn("text-[36px] leading-none font-extrabold tracking-[-0.04em] tabular", over ? "text-jm-red" : "text-jm-green")}>{days}</span>
                   <span className="text-[14px] font-medium text-jm-ink/70">
-                    {t.common.days(days).replace(/^\d+\s/, "")}
+                    {t.common.daysWord(days)}
                     {days > 0 && ` · ${t.form.calendarDays}`}
                   </span>
                 </p>
@@ -178,7 +200,7 @@ function NewRequestForm() {
                   </>
                 )}
               </div>
-              <div className="mt-4">
+              <div className="mt-5">
                 <Field label={t.form.commentOptional}>
                   <textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder={t.form.commentPh} rows={2} className={cn(inputCls, "resize-none py-3")} />
                 </Field>
@@ -188,12 +210,12 @@ function NewRequestForm() {
           </div>
         </div>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-          <Card className="space-y-4 p-5 sm:p-6">
+        <div className="grid-12">
+          <Card className="col-span-12 space-y-5 p-5 sm:p-6 lg:col-span-7 xl:col-span-8">
             <Field label={t.form.amount}>
               <input
                 inputMode="numeric"
-                value={amountNum ? amountNum.toLocaleString("ru-RU").replace(/ |,/g, " ") : amount}
+                value={amountNum ? amountNum.toLocaleString("ru-RU").replace(/ |,/g, " ") : amount}
                 onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ""))}
                 placeholder={t.form.amountPh}
                 className={cn(inputCls, "h-14 text-[22px] font-bold tracking-tight tabular")}
@@ -203,6 +225,7 @@ function NewRequestForm() {
               {[20000, 50000, 100000].map((v) => (
                 <button
                   key={v}
+                  type="button"
                   onClick={() => setAmount(String(v))}
                   className={cn(
                     "h-9 rounded-full px-4 text-[14px] font-semibold transition-colors",
@@ -214,10 +237,17 @@ function NewRequestForm() {
               ))}
             </div>
             <Field label={t.form.reason}>
-              <textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t.form.reasonPh} rows={3} className={cn(inputCls, "resize-none py-3")} />
+              <textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t.form.reasonPh} rows={4} className={cn(inputCls, "resize-none py-3")} />
             </Field>
           </Card>
-          <SubmitBlock canSubmit={canSubmit} busy={busy} error={error} onSubmit={submit} />
+          <div className="col-span-12 flex flex-col gap-(--gutter) lg:col-span-5 xl:col-span-4">
+            <Card className="p-5 sm:p-6">
+              <p className="text-[12.5px] font-medium text-jm-muted">{t.form.amount}</p>
+              <p className="mt-1 text-[32px] leading-none font-extrabold tracking-[-0.03em] text-jm-green tabular">{amountNum ? fmtMoney(amountNum) : "—"}</p>
+              <p className="mt-3 text-[13px] text-jm-muted">{t.form.advanceHint}</p>
+            </Card>
+            <SubmitBlock canSubmit={canSubmit} busy={busy} error={error} onSubmit={submit} />
+          </div>
         </div>
       )}
     </div>
@@ -237,7 +267,7 @@ function SubmitBlock({ canSubmit, busy, error, onSubmit }: { canSubmit: boolean;
         {busy && <Loader2 className="animate-spin" />}
         {t.form.submit}
       </Btn>
-      <p className="flex items-center justify-center gap-2 text-[12.5px] text-jm-muted">
+      <p className="flex items-center justify-center gap-2 text-[12.5px] text-jm-muted sm:hidden">
         <Route className="size-3.5" /> {t.form.route}
       </p>
     </div>
@@ -251,7 +281,7 @@ function Keyed() {
 
 export default function NewRequestPage() {
   return (
-    <Suspense fallback={<Skeleton className="h-[420px]" />}>
+    <Suspense fallback={<Skeleton className="h-[420px] rounded-[20px]" />}>
       <Keyed />
     </Suspense>
   );

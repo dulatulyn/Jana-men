@@ -7,6 +7,10 @@ const parse = (iso: string) => (iso.length === 10 ? new Date(iso + "T00:00:00") 
 const KK_MONTHS = ["қаңтар", "ақпан", "наурыз", "сәуір", "мамыр", "маусым", "шілде", "тамыз", "қыркүйек", "қазан", "қараша", "желтоқсан"];
 const KK_MONTHS_SHORT = ["қаң.", "ақп.", "нау.", "сәу.", "мам.", "мау.", "шіл.", "там.", "қыр.", "қаз.", "қар.", "жел."];
 const KK_WEEKDAYS = ["жексенбі", "дүйсенбі", "сейсенбі", "сәрсенбі", "бейсенбі", "жұма", "сенбі"];
+const KK_WEEKDAYS_SHORT = ["Жс", "Дс", "Сс", "Ср", "Бс", "Жм", "Сн"];
+const RU_WEEKDAYS_SHORT = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
+const RU_MONTHS = ["январь", "февраль", "март", "апрель", "май", "июнь", "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь"];
+const RU_MONTHS_SHORT = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
 
 function kkFormat(d: Date, o: Intl.DateTimeFormatOptions) {
   const parts: string[] = [];
@@ -19,8 +23,14 @@ function kkFormat(d: Date, o: Intl.DateTimeFormatOptions) {
 }
 
 export function monthName(d: Date, l: Locale) {
-  return l === "kk" ? KK_MONTHS[d.getMonth()] : new Intl.DateTimeFormat("ru-RU", { month: "long" }).format(d);
+  return l === "kk" ? KK_MONTHS[d.getMonth()] : RU_MONTHS[d.getMonth()];
 }
+
+export const monthShort = (d: Date, l: Locale) => (l === "kk" ? KK_MONTHS_SHORT[d.getMonth()].replace(/\.$/, "") : RU_MONTHS_SHORT[d.getMonth()]);
+
+export const weekdayShort = (d: Date, l: Locale) => (l === "kk" ? KK_WEEKDAYS_SHORT[d.getDay()] : RU_WEEKDAYS_SHORT[d.getDay()]);
+
+export const capitalize = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
 export function fmtDate(iso: string | null | undefined, l: Locale, opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "long", year: "numeric" }) {
   if (!iso) return "";
