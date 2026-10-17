@@ -1,0 +1,61 @@
+# JanaMen — full stack: `docker compose up --build` → http://localhost:3000
+# Optional settings go in a root .env (see .env.example); everything has a working default.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: janamen
+      POSTGRES_PASSWORD: janamen
+      POSTGRES_DB: janamen
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U janamen -d janamen"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://janamen:janamen@db:5432/janamen?schema=public
+      JWT_SECRET: ${JWT_SECRET:-local-compose-secret-change-me}
+      CORS_ORIGINS: http://localhost:${WEB_PORT:-3000},http://127.0.0.1:${WEB_PORT:-3000}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-8000}:8000"
+
+  ai:
+    build: ./ai
+    environment:
+      PORT: 8001
+      BACKEND_MODE: real
+      BACKEND_URL: http://api:8000/api/v1
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-claude-sonnet-5-5}
+      CORS_ORIGINS: http://localhost:${WEB_PORT:-3000}
+    depends_on:
+      api:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./web
+      args:
+        NEXT_PUBLIC_API_MODE: real
+        # Called from the browser, so it must be the host-published API address.
+        NEXT_PUBLIC_API_URL: http://localhost:${API_PORT:-8000}/api/v1
+        # Called server-side by Next's /ai/* rewrite, inside the compose network.
+        AI_URL: http://ai:8001
+    depends_on:
+      api:
+        condition: service_healthy
+      ai:
+        condition: service_started
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+
+volumes:
+  dbdata:
