@@ -1,18 +1,20 @@
-# JanaMen — Digital HR Platform
+# JanaMen — единая цифровая HR-платформа
 
-Jana Post × Terricon Valley Hackathon 2026. One web platform where an employee sees their profile, requests, training, notifications and an HR assistant; managers and HR approve and track. Spec: [`SPEC.md`](SPEC.md).
+Кейс Jana Post × Terricon Valley Hackathon 2026, команда № 74. Сотрудник в одном окне видит профиль, заявки, обучение, уведомления и HR-ассистента; руководитель и HR согласуют заявки и следят за командой. Подробная спецификация — [`SPEC.md`](SPEC.md).
 
-## Run
+**Стек:** Next.js 16, React, TypeScript, Tailwind CSS, shadcn/ui · NestJS, Prisma, PostgreSQL · Hono, OpenAI API, Zod · Docker Compose.
+
+## Запуск
 
 ```bash
 docker compose up --build
 ```
 
-Open http://localhost:3000 and use a demo account (one-click buttons on the login page). Optional settings — an OpenAI key for the assistant (`OPENAI_API_KEY`, default model `gpt-5.4-mini`; an Anthropic key works too), ports — go in a root `.env`, see [`.env.example`](.env.example). Without a key, or if the model is unavailable, the assistant answers in keyword-search fallback mode over the same knowledge base.
+Откройте http://localhost:3000 и войдите демо-аккаунтом — на странице входа есть кнопки быстрого входа. Необязательные настройки — ключ OpenAI для ассистента (`OPENAI_API_KEY`, модель по умолчанию `gpt-5.4-mini`; подходит и ключ Anthropic) и порты — задаются в корневом `.env`, см. [`.env.example`](.env.example). Без ключа или если модель недоступна, ассистент отвечает поиском по той же базе знаний.
 
-### Without Docker
+### Без Docker
 
-Node 22+ and PostgreSQL 16 with a `janamen` role and database (password `janamen`):
+Нужны Node 22+ и PostgreSQL 16 с ролью и базой `janamen` (пароль `janamen`):
 
 ```bash
 cd backend && cp .env.example .env && npm ci && npm run db:migrate && npm run db:seed && npm run build && npm start
@@ -20,63 +22,71 @@ cd ai && cp .env.example .env && npm ci && npm run dev
 cd web && cp .env.example .env.local && npm ci && npm run dev
 ```
 
-Fresh demo data at any time: `cd backend && SEED_FORCE=1 npm run db:seed`.
+Вернуть свежие демо-данные: `cd backend && SEED_FORCE=1 npm run db:seed`.
 
-| Service | | Port |
+| Сервис | Что это | Порт |
 |---|---|---|
-| `web` | Next.js UI ([web/](web/README.md)) | 3000 |
-| `api` | NestJS + Prisma backend ([backend/](backend/README.md)) | 8000 |
-| `ai` | HR assistant service ([ai/](ai/README.md)) | internal |
-| `db` | PostgreSQL 16 | internal |
+| `web` | интерфейс на Next.js ([web/](web/README.md)) | 3000 |
+| `api` | бэкенд NestJS + Prisma ([backend/](backend/README.md)) | 8000 |
+| `ai` | HR-ассистент ([ai/](ai/README.md)) | внутренний |
+| `db` | PostgreSQL 16 | внутренний |
 
-## Demo accounts — password `demo1234`
+## Демо-аккаунты — пароль `demo1234`
 
-| Email | Role |
+| Email | Роль |
 |---|---|
-| `aigerim@jana.demo` | employee |
-| `daulet@jana.demo` | employee (Erlan's team) |
-| `erlan@jana.demo` | manager |
-| `asel@jana.demo` | employee (other department — Erlan gets 403) |
+| `aigerim@jana.demo` | сотрудник |
+| `daulet@jana.demo` | сотрудник (команда Ерлана) |
+| `erlan@jana.demo` | руководитель |
+| `asel@jana.demo` | сотрудник другого подразделения — Ерлану её профиль недоступен (403) |
 | `dinara@jana.demo` | HR |
 
-## Demo scenario
+Данные тестовые, реальных персональных данных в репозитории нет.
 
-1. **Айгерим** — home: profile, vacation balance, tasks, course, notifications.
-2. Files a vacation request — via the form, or by telling the assistant «хочу в отпуск с 10 по 20 ноября», which pre-fills the form.
-3. **Ерлан** sees it in Approvals and approves. Opening Асель's profile shows «Нет доступа» — the API returns 403.
-4. **Динара** posts it → 1С:ЗУП and Documentolog (mocked) → Айгерим gets a notification, the timeline updates, the balance drops.
-5. Айгерим completes the assigned course and quiz → progress in her profile, notification.
-6. Assistant: «Сколько дней отпуска положено?» → answer with source, typed out word by word; «Какая зарплата у Ерлана?» → refusal; unknown question → «Передать в HR» (HR users get a hint to add a KB article instead).
-7. **Ерлан** — «Моя команда»: who is on vacation, what waits for his decision, overdue training; approves from a member's page, assigns a course, scrolls the vacation calendar by week / month / quarter / year.
-8. **Динара** — HR panel: request pipeline, unanswered assistant questions, integration journal; a failed Documentolog call is retried with the same idempotency key, without duplicates.
+## Демо-сценарий
 
-## Architecture
+1. **Айгерим** — главная: профиль, остаток отпуска, задачи, назначенный курс, уведомления.
+2. Подаёт заявку на отпуск — через форму или фразой ассистенту «хочу в отпуск с 10 по 20 ноября»: даты, дни и остаток посчитаны, форма заполнена, остаётся проверить и отправить.
+3. **Ерлан** видит заявку в «Согласованиях» и согласует. Профиль Асель из другого подразделения открывается как «Нет доступа» — API отвечает 403.
+4. **Динара** проводит заявку → 1С:ЗУП и Documentolog (моки) → у Айгерим уведомление, обновлённый таймлайн и уменьшенный остаток.
+5. Айгерим проходит назначенный курс и тест → прогресс и результат в профиле, уведомления ей и тому, кто назначил курс.
+6. Ассистент: «Сколько дней отпуска положено?» → ответ с источником, печатается по словам; «Какая зарплата у Ерлана?» → отказ; вопрос вне базы знаний → честное «надёжного ответа нет» и кнопка «Передать в HR» (HR вместо этого видит подсказку дополнить базу знаний).
+7. **Ерлан** — «Моя команда»: кто в отпуске, что ждёт его решения, просроченное обучение; согласует со страницы сотрудника, назначает курс, листает календарь отпусков по неделям, месяцам, кварталам и году.
+8. **Динара** — HR-панель: заявки по статусам, неотвеченные вопросы ассистента, журнал интеграций; упавший вызов Documentolog повторяется с тем же ключом идемпотентности, без дублей.
 
-```
-Browser ──JWT──▶ web (Next.js) ──/ai/*──▶ ai ──JWT of the user──▶ api ──▶ PostgreSQL
-   └────────────────JWT─────────────────────────────────────────▶ api ──▶ HrisAdapter ─▶ 1С:ЗУП (mock)
-                                                                      └─▶ DocsAdapter ─▶ Documentolog (mock)
-```
+## Архитектура
 
 ```mermaid
 flowchart LR
-  U[Employee / Manager / HR<br/>browser] -->|JWT| W[web<br/>Next.js]
-  W -->|/ai/ask/stream SSE| A[ai<br/>HR assistant]
+  U[Сотрудник / руководитель / HR<br/>браузер] -->|JWT| W[web<br/>Next.js]
+  W -->|SSE /ai/ask/stream| A[ai<br/>HR-ассистент]
   W -->|REST /api/v1| B[api<br/>NestJS + Prisma]
-  A -->|user's own JWT| B
-  A -.->|KB + own profile only| L[(LLM<br/>OpenAI / Anthropic)]
+  A -->|JWT самого пользователя| B
+  A -.->|только база знаний и свой профиль| L[(LLM<br/>OpenAI / Anthropic)]
   B --> D[(PostgreSQL)]
-  B --> H[HrisAdapter] --> Z[1С:ЗУП<br/>mock → real]
-  B --> G[DocsAdapter] --> X[Documentolog<br/>mock → real]
-  B --> J[(integration journal<br/>idempotency key, retry)]
+  B --> H[HrisAdapter] --> Z[1С:ЗУП<br/>мок → реальная система]
+  B --> G[DocsAdapter] --> X[Documentolog<br/>мок → реальная система]
+  B --> J[(журнал интеграций<br/>идемпотентность, повтор)]
 ```
 
-The assistant calls the API with the current user's token, so it can only ever see that user's data. Every answer is checked on the server before it is shown: each cited quote must exist verbatim in the knowledge base and every number must come from a verified quote, otherwise the assistant says it has no reliable answer. Integration details: [backend/README.md](backend/README.md#integration-architecture).
+- **Роли и доступ.** Права проверяются на сервере для каждого запроса: своё / прямые подчинённые / всё для HR. Ассистент обращается к API с токеном текущего пользователя, поэтому видит только его данные.
+- **Защита от выдумок.** Ответ ассистента показывается, только если каждая цитата дословно есть в статье базы знаний, а каждая цифра — в проверенной цитате. Иначе ассистент говорит, что надёжного ответа нет, и предлагает передать вопрос в HR. Кадровых решений AI не принимает: заявку он только готовит, отправляет и согласует человек.
+- **Где подключаются 1С:ЗУП и Documentolog.** `backend/src/integrations`: бизнес-логика работает только с интерфейсами `HrisAdapter` и `DocsAdapter`, сейчас за ними мок-адаптеры. Реальная система — это новый класс и одна привязка в `IntegrationsModule`. Каждый вызов пишется в журнал с ключом идемпотентности (номер заявки) и таймаутом; сбой 1С не откатывает одобрение — HR видит ошибку в журнале и повторяет вызов. Подробнее — [backend/README.md](backend/README.md#integration-architecture).
 
-## Implemented / mocked / next
+## Реализовано / смоделировано / дальше
 
 | | |
 |---|---|
-| **Implemented** | auth & roles with server-side data scopes, requests with two-stage approval and timeline, notifications, academy with quizzes and course assignment, manager workspace (team overview, inline approvals, team training), interactive vacation calendar (week / month / quarter / year), HR dashboard, assistant with sources / refusals / escalation / pre-filled requests and streamed answers, knowledge base editing, integration journal with idempotent retry, RU / KZ interface |
-| **Mocked** | 1С:ЗУП (employee sync, posting vacations/advances) and Documentolog (applications for signature) — behind `HrisAdapter` / `DocsAdapter`; replacing a mock is one class |
-| **Next** | real 1С and Documentolog adapters, e-signature, embeddings once the knowledge base grows, native mobile app |
+| **Реализовано** | вход и роли с проверкой прав на сервере; заявки на отпуск и аванс с двухэтапным согласованием и историей; уведомления; Jana Academy — курсы, уроки, тест, прогресс, назначение курсов; кабинет руководителя — команда, согласования, обучение команды; интерактивный календарь отпусков; HR-панель; ассистент с источниками, отказами, эскалацией в HR, автозаполнением заявок и потоковым ответом; база знаний с редактированием для HR через API; журнал интеграций с повтором; интерфейс на русском и казахском, адаптивная вёрстка |
+| **Смоделировано** | 1С:ЗУП (синхронизация сотрудников, проведение отпусков и авансов) и Documentolog (заявления на подпись) — мок-адаптеры за `HrisAdapter` / `DocsAdapter`; тестовые сотрудники и демо-регламенты базы знаний |
+| **Дальше** | реальные адаптеры 1С и Documentolog, очередь фоновых повторов, статус подписи из Documentolog, корпоративный вход (SSO), ЭЦП, новые типы заявок и HR-модули |
+
+## Проверки
+
+- `cd backend && npm test` — 61 e2e-тест API против PostgreSQL (тестовая база задаётся в `TEST_DATABASE_URL`).
+- `cd ai && npm test` — 122 теста ассистента; `npm run eval` — 30 эталонных вопросов: ответ по базе, нет ответа, отказ, автозаполнение заявки.
+
+## Команда
+
+- **Дулатулы Нурасыл** — frontend, UX, AI-ассистент
+- **Владимир Дон** — backend, интеграции
