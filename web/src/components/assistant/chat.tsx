@@ -125,7 +125,7 @@ function AssistantBubble({ m, onSource, onNavigate, tone }: { m: ChatMessage; on
   const meta = m.meta;
   const streaming = m.phase === "streaming";
   const calm = !!meta && meta.status !== "answered";
-  const canEscalate = !!meta && me?.role !== "hr" && !!meta.log_id && (meta.status === "no_answer" || (calm && meta.can_escalate));
+  const canEscalate = !!meta && me?.role !== "hr" && !!meta.log_id && (meta.status === "no_answer" || meta.can_escalate);
 
   const escalate = async () => {
     if (!meta?.log_id) return;
