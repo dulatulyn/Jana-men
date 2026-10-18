@@ -1,3 +1,4 @@
+import { chunkArticle } from "./kb.js";
 import { normalizeForMatch, trimQuote } from "./text.js";
 import { PROFILE_SOURCE, type Citation, type KbArticle, type Source } from "./types.js";
 
@@ -8,14 +9,15 @@ export interface VerifyInput {
   citations: Citation[];
   kb: KbArticle[];
   profileText: string;
-  question: string;
   extraFacts?: string[];
 }
+
+export type VerifiedCitation = Citation & { heading?: string; section?: string };
 
 export interface VerifyResult {
   ok: boolean;
   sources: Source[];
-  verified: Citation[];
+  verified: VerifiedCitation[];
   rejected: Array<Citation & { why: string }>;
   unsupportedNumbers: string[];
 }
@@ -25,12 +27,32 @@ function numbersIn(s: string): string[] {
   return n.match(/\d+/g) ?? [];
 }
 
+const NUMBER_WORDS: Array<[RegExp, string]> = (
+  [
+    ["один|одна|одно|одного|одной|одному|одним|одну", "1"],
+    ["два|две|двух|двум|двумя", "2"],
+    ["три|трех|трем|тремя", "3"],
+    ["четыре|четырех|четырем", "4"],
+    ["пять|пяти|пятью", "5"],
+    ["шесть|шести|шестью", "6"],
+    ["семь|семи", "7"],
+    ["восемь|восьми", "8"],
+    ["девять|девяти", "9"],
+    ["десять|десяти", "10"],
+  ] as const
+).map(([words, digit]) => [new RegExp(`(?<!\\p{L})(?:${words})(?!\\p{L})`, "u"), digit]);
+
+function wordNumbersIn(s: string): string[] {
+  const n = normalizeForMatch(s);
+  return NUMBER_WORDS.filter(([re]) => re.test(n)).map(([, digit]) => digit);
+}
+
 export function verifyCitations(input: VerifyInput): VerifyResult {
   const bySlug = new Map(input.kb.map((a) => [a.slug, a]));
-  const verified: Citation[] = [];
+  const verified: VerifiedCitation[] = [];
   const rejected: Array<Citation & { why: string }> = [];
   const sources: Source[] = [];
-  const supportText: string[] = [input.question, ...(input.extraFacts ?? [])];
+  const supportText: string[] = [...(input.extraFacts ?? [])];
 
   for (const c of input.citations) {
     const quote = normalizeForMatch(trimQuote(c.quote ?? ""));
@@ -58,12 +80,13 @@ export function verifyCitations(input: VerifyInput): VerifyResult {
       rejected.push({ ...c, why: "quote not found verbatim" });
       continue;
     }
-    verified.push(c);
+    const chunk = chunkArticle(art).find((ch) => normalizeForMatch(ch.text).includes(quote));
+    verified.push(chunk ? { ...c, heading: chunk.heading, section: chunk.text } : c);
     if (!sources.some((s) => s.slug === art.slug)) sources.push({ slug: art.slug, title: art.title });
     supportText.push(c.quote);
   }
 
-  const supportNums = new Set(supportText.flatMap(numbersIn));
+  const supportNums = new Set([...supportText.flatMap(numbersIn), ...verified.flatMap((c) => wordNumbersIn(c.quote))]);
   const unsupportedNumbers = verified.length ? numbersIn(input.answer).filter((n) => !supportNums.has(n)) : [];
 
   return {

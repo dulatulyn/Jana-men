@@ -15,4 +15,4 @@ export class FakeModel implements ModelClient {
   }
 }
 
-export const out = (o: Partial<ModelOutput>): ModelOutput => ({ status: "answered", answer: "", citations: [], action: null, ...o });
+export const out = (o: Partial<ModelOutput>): ModelOutput => ({ status: "answered", refusal_reason: null, answer: "", partial: false, citations: [], action: null, ...o });

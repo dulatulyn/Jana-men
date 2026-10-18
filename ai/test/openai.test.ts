@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
 import { Assistant } from "../src/assistant.js";
 import { modelConfig } from "../src/config.js";
-import { AnthropicModelClient, ModelOutputError, ModelRefusalError, ModelUnavailableError, RULES, type ModelOutput, type ModelRequest } from "../src/llm.js";
+import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
+import { AnthropicModelClient, ModelOutputError, ModelOutputSchema, ModelRefusalError, ModelUnavailableError, RULES, type ModelOutput, type ModelRequest } from "../src/llm.js";
 import { createModelClient } from "../src/models.js";
 import { OpenAIModelClient, OUTPUT_FORMAT_NAME, PROMPT_CACHE_KEY, type OpenAIClientLike } from "../src/openai.js";
 import { renderProfile } from "../src/profile.js";
@@ -70,7 +71,9 @@ describe("OpenAIModelClient", () => {
     expect(body.reasoning).toEqual({ effort: "low" });
     expect(body.max_output_tokens).toBeGreaterThanOrEqual(1000);
     expect(body.text.format).toMatchObject({ type: "json_schema", name: OUTPUT_FORMAT_NAME, strict: true });
-    expect(body.text.format.schema.required).toEqual(["status", "answer", "citations", "action"]);
+    expect(body.text.format.schema.required).toEqual(["status", "refusal_reason", "answer", "partial", "citations", "action"]);
+    expect(body.text.format.schema.properties.refusal_reason.anyOf[0].enum).toEqual(["other_person", "hr_decision", "injection", "out_of_scope"]);
+    expect(body.text.format.schema.properties.partial).toEqual({ type: "boolean" });
     expect(body.instructions.startsWith("KNOWLEDGE BASE.")).toBe(true);
     expect(body.instructions.indexOf("<article slug=\"vacation-annual\"")).toBeLessThan(body.instructions.indexOf(RULES));
     expect(body.instructions.endsWith(RULES)).toBe(true);
@@ -189,6 +192,15 @@ describe("Assistant with a failing OpenAI provider", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ status: "answered", mode: "fallback" });
     expect((await (await app.request("/health")).json()).llm_available).toBe(false);
+  });
+});
+
+describe("Anthropic structured output", () => {
+  it("uses the same schema with refusal_reason and partial", () => {
+    const f = betaZodOutputFormat(ModelOutputSchema) as unknown as { schema: { properties: Record<string, unknown>; required: string[] } };
+    expect(f.schema.required).toEqual(["status", "refusal_reason", "answer", "partial", "citations", "action"]);
+    expect(Object.keys(f.schema.properties)).toEqual(f.schema.required);
+    expect(ModelOutputSchema.safeParse({ status: "answered", answer: "", citations: [], action: null }).success).toBe(false);
   });
 });
 

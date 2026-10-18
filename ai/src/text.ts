@@ -1,3 +1,33 @@
+const BOUNDARY = "(?:(?<![\\p{L}\\p{N}])(?=[\\p{L}\\p{N}])|(?<=[\\p{L}\\p{N}])(?![\\p{L}\\p{N}]))";
+
+export function U(re: RegExp): RegExp {
+  return new RegExp(re.source.split("\\b").join(BOUNDARY), re.flags.includes("u") ? re.flags : re.flags + "u");
+}
+
+const INVISIBLE = /[­᠎​-‏‪-‮⁠-⁤﻿]/g;
+
+export function stripInvisible(s: string): string {
+  return s.replace(INVISIBLE, "");
+}
+
+export function splitSentences(line: string): string[] {
+  return line.split(/(?<=[.!?…])\s+/);
+}
+
+export function keepSentences(text: string, keep: (sentence: string) => boolean): string {
+  const lines: string[] = [];
+  for (const line of text.split("\n")) {
+    if (!line.trim()) {
+      lines.push("");
+      continue;
+    }
+    const marker = /^\s*(?:[-*•]|\d+[.)])\s+/.exec(line)?.[0] ?? "";
+    const kept = splitSentences(line.slice(marker.length)).filter(keep).join(" ");
+    if (kept.trim()) lines.push(marker + kept);
+  }
+  return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
 export function normalizeForMatch(s: string): string {
   return s
     .toLowerCase()

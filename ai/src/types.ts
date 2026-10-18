@@ -16,6 +16,7 @@ export interface Profile {
 export interface KbArticle {
   slug: string;
   title: string;
+  title_kk?: string;
   category: string;
   body_md: string;
   updated_at?: string;
@@ -54,3 +55,4 @@ export interface AskResponse {
 }
 
 export const PROFILE_SOURCE: Source = { slug: "profile", title: "Мой профиль (1С:ЗУП)" };
+export const PROFILE_SOURCE_KK: Source = { slug: "profile", title: "Менің профилім (1С:ЗУП)" };

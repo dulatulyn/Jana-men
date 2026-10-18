@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
-import { backend, NOW } from "./helpers.js";
+import { backend, FakeModel, NOW, out } from "./helpers.js";
 
 const app = createApp({ backend: backend(), now: NOW });
 const post = (path: string, body: unknown, token?: string) =>
@@ -33,6 +33,26 @@ describe("HTTP API", () => {
     const j = await r.json();
     expect(Object.keys(j).sort()).toEqual(["action", "answer", "can_escalate", "log_id", "mode", "sources", "status"]);
     expect(j.status).toBe("answered");
+  });
+
+  it("greetings and thanks get a fixed reply without a model call", async () => {
+    const m = new FakeModel(out({ status: "no_answer" }));
+    const withModel = createApp({ backend: backend(), model: m, now: NOW });
+    for (const [question, locale, start] of [
+      ["привет", "ru", "Здравствуйте!"],
+      ["Спасибо!", "ru", "Пожалуйста!"],
+      ["Сәлем!", "kk", "Сәлеметсіз бе!"],
+    ]) {
+      const r = await withModel.request("/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer mock.aigerim" },
+        body: JSON.stringify({ question, locale }),
+      });
+      const j = await r.json();
+      expect(j).toMatchObject({ status: "answered", can_escalate: false, sources: [], action: null, mode: "llm" });
+      expect(j.answer.startsWith(start)).toBe(true);
+    }
+    expect(m.calls).toHaveLength(0);
   });
 
   it("POST /escalate in mock mode", async () => {

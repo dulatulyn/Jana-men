@@ -24,11 +24,28 @@ export function loadKbDir(dir: string): KbArticle[] {
       return {
         slug: meta.slug ?? f.replace(/\.md$/, ""),
         title: meta.title ?? f,
+        ...(meta.title_kk ? { title_kk: meta.title_kk } : {}),
         category: meta.category ?? "general",
         body_md: body,
         updated_at: fs.statSync(full).mtime.toISOString(),
       };
     });
+}
+
+const kkTitleCache = new Map<string, Map<string, string>>();
+
+export function kkTitles(dir: string): Map<string, string> {
+  let titles = kkTitleCache.get(dir);
+  if (!titles) {
+    titles = new Map();
+    try {
+      for (const a of loadKbDir(dir)) if (a.title_kk) titles.set(a.slug, a.title_kk);
+    } catch {
+      titles.clear();
+    }
+    kkTitleCache.set(dir, titles);
+  }
+  return titles;
 }
 
 export interface KbChunk {

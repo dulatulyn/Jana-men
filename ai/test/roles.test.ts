@@ -63,9 +63,45 @@ describe("HR users are never offered «Передать в HR»", () => {
 
     const emp = new FakeModel(out({ status: "refused", answer: "Не могу раскрывать чужие данные. Могу передать его в HR." }));
     const r2 = await ask(new Assistant({ backend: backend(), model: emp, now: NOW }), "Сколько лет Даулету примерно", "aigerim");
-    expect(r2.answer).toBe("Не могу раскрывать чужие данные. Могу передать его в HR.");
+    expect(r2.answer).toBe("К сожалению, я не могу ответить на этот вопрос. Он вне моих полномочий как HR-ассистента. Могу передать его в HR.");
     expect(emp.calls[0].role).toBe("employee");
     expect(buildSystem(emp.calls[0])[2].text).not.toContain("HR specialist");
+  });
+
+  it("HR users never see «Передать в HR» in an answered text", async () => {
+    const HOW = "Политика компании: напишите HR-менеджеру на hr@jana.demo или нажмите «Передать в HR» в чате ассистента и укажите, какая справка нужна и для чего.";
+    const READY = "Политика компании: справка готовится в течение 2 рабочих дней, электронная версия приходит на почту.";
+    const m = new FakeModel(
+      out({
+        answer: "Напишите HR-менеджеру на hr@jana.demo или нажмите «Передать в HR» в чате ассистента и укажите, какая справка нужна и для чего.\n- Справка готовится в течение 2 рабочих дней, электронная версия приходит на почту.",
+        partial: true,
+        citations: [
+          { slug: "hr-contacts", quote: HOW },
+          { slug: "hr-contacts", quote: READY },
+        ],
+      }),
+    );
+    const llm = new Assistant({ backend: backend(), model: m, now: NOW });
+    const r = await ask(llm, "Как заказать справку о доходах?", "dinara");
+    expect(r).toMatchObject({ status: "answered", can_escalate: false });
+    expect(r.answer).toBe("- Справка готовится в течение 2 рабочих дней, электронная версия приходит на почту.");
+    expect(offersHrHandoff(r.answer)).toBe(false);
+    const emp = await ask(llm, "Как заказать справку о доходах?", "asel");
+    expect(emp.answer).toContain("«Передать в HR»");
+    expect(emp.can_escalate).toBe(true);
+
+    const only = new FakeModel(out({ answer: "Нажмите «Передать в HR» в чате ассистента.", citations: [{ slug: "hr-contacts", quote: HOW }] }));
+    const r2 = await ask(new Assistant({ backend: backend(), model: only, now: NOW }), "Как заказать справку?", "dinara");
+    expect(r2).toMatchObject({ status: "no_answer", can_escalate: false });
+    expect(r2.answer).toContain("Добавьте статью в базу знаний");
+
+    const kk = new FakeModel(out({ answer: "Ассистент чатында «HR-ге жіберу» түймесін басыңыз. Анықтама 2 жұмыс күні ішінде дайындалады.", citations: [{ slug: "hr-contacts", quote: READY }] }));
+    const r3 = await ask(new Assistant({ backend: backend(), model: kk, now: NOW }), "Жұмыс орнынан анықтаманы қалай алуға болады?", "dinara", "kk");
+    expect(r3.answer).toBe("Анықтама 2 жұмыс күні ішінде дайындалады.");
+
+    const fb = await ask(a, "Как заказать справку о доходах?", "dinara");
+    expect(fb.status).toBe("answered");
+    expect(offersHrHandoff(fb.answer)).toBe(false);
   });
 
   it("LLM no_answer for HR uses the knowledge-base text", async () => {

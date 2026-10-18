@@ -7,7 +7,7 @@ npm install
 npm run dev        # http://localhost:8001, watch mode, loads ai/.env if it exists
 npm run serve      # same without watch
 npm test           # unit tests (the model SDKs are mocked)
-npm run eval       # 30 eval cases, prints a table: fallback without a key, LLM with one
+npm run eval       # 78 eval cases, prints a table: fallback without a key, LLM with one
 npm run build && npm start
 docker build -t janamen-ai . && docker run -p 8001:8001 --env-file .env janamen-ai
 ```
@@ -26,6 +26,7 @@ docker build -t janamen-ai . && docker run -p 8001:8001 --env-file .env janamen-
 | `ANTHROPIC_API_KEY` / `AI_MODEL` | — / `claude-sonnet-5-5` | |
 | `BACKEND_MODE` / `BACKEND_URL` | `mock` / `http://localhost:8000/api/v1` | |
 | `PORT`, `CORS_ORIGINS` | `8001`, `http://localhost:3000` | |
+| `APP_TZ` | `Asia/Almaty` | time zone for "today" (relative dates, past dates, the 14-day notice rule) |
 
 A missing key for the chosen provider, an unknown provider or effort only print a startup warning; the service still starts.
 
@@ -51,13 +52,13 @@ In mock mode the token is `mock.<login>`, where login is one of `aigerim`, `daul
 
 ## Roles
 
-The service reads the user's role from `GET /me`. For HR users `can_escalate` is always `false`, the no-answer text suggests adding an article to the knowledge base instead of «Передать в HR», refusals do not offer passing the question to HR, and the model is told the user is an HR specialist.
+The service reads the user's role from `GET /me`. For HR users `can_escalate` is always `false`, the no-answer text suggests adding an article to the knowledge base instead of «Передать в HR», refusals do not offer passing the question to HR, sentences that tell the user to press «Передать в HR» are removed from answers, and the model is told the user is an HR specialist.
 
 ## How it works
 ```
 question ─▶ pre-filter (regex: injection / other people's data / HR decisions) ──▶ refused
         └─▶ LLM: whole KB + rules (prompt-cached prefix) + ONLY my profile ─▶ strict JSON
-                 {status, answer, citations:[{slug, quote}], action}
+                 {status, refusal_reason, answer, partial, citations:[{slug, quote}], action}
             └─▶ server-side verification ─▶ answered | no_answer
         └─▶ (no key / provider error) deterministic BM25 over KB sections ─▶ section quoted verbatim | no_answer
 ```
@@ -69,9 +70,9 @@ question ─▶ pre-filter (regex: injection / other people's data / HR decision
 ## Anti-hallucination design (5 points)
 1. **The context is closed.** The model receives only the KB articles and the current user's own profile, fetched from the backend with the user's own JWT. The service has no way to request anyone else's data, so it cannot leak it.
 2. **Strict structured output.** Every answer is JSON with `status` and `citations:[{slug, quote}]`. Free-form text is not accepted.
-3. **Citations are checked by code, not trusted.** A quote must appear **verbatim** in the cited article (after normalizing case, quotes and whitespace). The slug must exist. Every number in the answer must appear in a verified quote. If any check fails, the answer is replaced with a standard "no reliable answer" message. Profile answers cite `profile` and are checked against the profile values.
-4. **Two layers of refusal.** A cheap regex pre-filter (prompt injection, other employees' salary/vacation/contacts, "list all employees", "approve my request") runs before the model, and the model has the same rules. Refusals never carry sources.
-5. **The assistant never acts.** Vacation and advance intents return a `prefill_request` action. Dates and days (calendar days, inclusive) are recomputed by code and checked against the vacation balance, with a warning if the balance is exceeded. The user reviews the form and submits it. Without an API key or when the API fails, a deterministic search returns the KB section **verbatim** with its source, or `no_answer`, with `mode:"fallback"`. The demo never crashes.
+3. **Citations are checked by code, not trusted.** A quote must appear **verbatim** in the cited article (after normalizing case, quotes and whitespace). The slug must exist. Every number in the answer must appear in a verified quote (digits, or number words such as «пяти» → 5); numbers the user typed and numbers the model computed do not count. If a quote is verified but a number is not, the answer is replaced with the verified quotes verbatim; if no quote is verified, with a standard "no reliable answer" message. Profile answers cite `profile` and are checked against the profile values. A partial answer (`partial: true`, or text saying the knowledge base does not cover something) keeps `can_escalate: true`.
+4. **Two layers of refusal.** A cheap regex pre-filter (prompt injection, other employees' salary/vacation/contacts, "list all employees", "approve my request") runs before the model, and the model has the same rules. The model only chooses `refusal_reason`; the user always gets the fixed, localized refusal text for it, never model text. Refusals never carry sources. Greetings and thanks get a fixed reply without a model call.
+5. **The assistant never acts.** Vacation and advance intents return a `prefill_request` action. Only the model decides that the user wants to file their own request (no action for information questions, colleagues' or subordinates' requests, manager actions). Explicit date ranges in the question are parsed by code, otherwise the model's dates are used; days (calendar days, inclusive) are recomputed by code and checked against the vacation balance and the 14-day notice rule, with warnings; an advance draft always states the 50% limit. A date that does not exist (31 ноября) gets a fixed reply. The user reviews the form and submits it. Without an API key or when the API fails, a deterministic search returns the KB section **verbatim** with its source, or `no_answer`, with `mode:"fallback"`. The demo never crashes.
 
 ## Layout
 `src/assistant.ts` orchestration (`prepare` loads profile, KB and role; `run` is the pipeline) · `src/guard.ts` pre-filter and fixed texts · `src/verify.ts` citation check · `src/llm.ts` shared prompt, model interface, Anthropic client · `src/openai.ts` OpenAI client · `src/models.ts` provider factory · `src/config.ts` env parsing · `src/stream.ts` SSE chunking and pacing · `src/fallback.ts` BM25 · `src/action.ts` dates and actions · `src/profile.ts` own-profile answers · `src/backend/` `BackendClient` (Mock/Real) · `kb/*.md` knowledge base (demo content, fictional ТОО «Jana Post») · `eval/` eval cases and runner · `BACKEND_CONTRACT.md` what the backend must provide.
